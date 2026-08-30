@@ -1,0 +1,520 @@
+GOVMESH – SIH26129
+DEPARTMENT 1 – REVENUE & FOREST DEPARTMENT
+SIMULATED DEPARTMENT SYSTEM – MVP REQUIREMENTS
+============================================================
+
+PURPOSE
+-------
+Department 1 represents the Revenue & Forest Department in the
+GovMesh interoperability demonstration.
+
+Its purpose in the MVP is to demonstrate:
+- Department-specific service processing
+- Citizen/application verification
+- A heterogeneous government system connected through GovMesh
+- REST/JSON integration
+- Workflow status updates
+- Data validation
+- Consent-aware data exchange
+- Failure/exception reporting
+- Auditability
+
+IMPORTANT:
+This is a simulated department system for the SIH prototype.
+It must NOT be presented as a live integration with the Government
+of Maharashtra unless formal authorization/API access exists.
+
+
+============================================================
+1. DEPARTMENT LOGIN & AUTHENTICATION
+============================================================
+
+MUST HAVE:
+- Department officer login
+- Username/mobile/email
+- Password or simulated OTP
+- JWT/OIDC-style session
+- Role-based access control
+- Logout
+- Session timeout
+- Secure password handling
+- Re-authentication for sensitive actions
+
+Suggested roles:
+- Revenue Officer
+- Senior Revenue Officer
+- Department Administrator
+- Read-only Auditor
+
+Permissions:
+Revenue Officer:
+- View assigned applications
+- Verify documents/data
+- Approve/reject department step
+- Request additional information
+
+Senior Officer:
+- Review escalated cases
+- Override/review exceptions according to policy
+
+Administrator:
+- Manage department users
+- Configure service metadata
+- View system health
+
+Auditor:
+- Read-only access to audit records
+
+
+============================================================
+2. DEPARTMENT DASHBOARD
+============================================================
+
+Dashboard should show:
+
+- Total incoming requests
+- Pending requests
+- Processing requests
+- Completed requests
+- Rejected requests
+- Action-required cases
+- Failed/queued requests
+- Average processing time
+- Today's applications
+
+Example:
+
+REVENUE DEPARTMENT
+
+Incoming Requests       42
+Pending Verification    12
+In Progress              8
+Completed               20
+Action Required          2
+
+SYSTEM:
+GovMesh Connection       ONLINE
+API Status                ONLINE
+Pending Events            3
+
+
+============================================================
+3. INCOMING GOVMESH REQUESTS
+============================================================
+
+Department receives requests from GovMesh.
+
+Each request should contain:
+
+- Application ID
+- Correlation ID
+- Citizen reference ID
+- Service type
+- Requested operation
+- Data received
+- Purpose
+- Consent reference
+- Timestamp
+- Priority
+- Required action
+
+Example:
+
+Application:
+GM-2026-000124
+
+Service:
+ADDRESS_CHANGE
+
+Purpose:
+Update Revenue address record
+
+Consent:
+CONSENT-00124
+
+Status:
+PENDING
+
+
+============================================================
+4. ADDRESS VERIFICATION SERVICE
+============================================================
+
+Primary MVP use case:
+
+ADDRESS CHANGE
+
+Department receives:
+- Citizen name
+- Existing address
+- New address
+- Supporting document metadata/result
+- Consent reference
+
+Officer can:
+- View request
+- Verify information
+- Accept
+- Reject
+- Request additional information
+
+Possible result:
+
+VERIFIED
+REJECTED
+ACTION_REQUIRED
+PENDING
+
+
+============================================================
+5. DOCUMENT VERIFICATION
+============================================================
+
+Show:
+- Uploaded document
+- Document type
+- Extracted fields
+- Validation status
+- Officer review
+
+Example:
+
+ADDRESS PROOF
+Name: XXXXX
+Address: XXXXX
+Issue Date: XXXXX
+
+AI/OCR Result:
+VALIDATED
+
+Officer:
+[Approve]
+[Reject]
+[Request More Information]
+
+
+============================================================
+6. DATA VALIDATION
+============================================================
+
+Validate:
+- Required fields
+- Name format
+- Address completeness
+- Date format
+- Document reference
+- Duplicate application
+- Consent validity
+
+Validation errors should be returned to GovMesh using structured
+error codes.
+
+
+============================================================
+7. REST API INTEGRATION
+============================================================
+
+Department 1 should deliberately use:
+
+Protocol:
+REST
+
+Payload:
+JSON
+
+Suggested endpoints:
+
+POST /api/v1/revenue/address/verify
+GET  /api/v1/revenue/application/{id}
+POST /api/v1/revenue/application/{id}/approve
+POST /api/v1/revenue/application/{id}/reject
+POST /api/v1/revenue/application/{id}/request-info
+GET  /api/v1/revenue/health
+
+Example response:
+
+{
+  "applicationId": "GM-2026-000124",
+  "status": "VERIFIED",
+  "department": "REVENUE"
+}
+
+
+============================================================
+8. DEPARTMENT-SPECIFIC DATA MODEL
+============================================================
+
+Use a deliberately different internal schema from GovMesh.
+
+Example:
+
+Revenue system:
+citizen_name
+house_no
+street
+village
+taluka
+district
+proof_id
+verification_status
+
+GovMesh canonical model:
+citizen.name
+citizen.address
+citizen.address.district
+documents[]
+verification.status
+
+GovMesh must perform the transformation.
+
+
+============================================================
+9. CONSENT VERIFICATION
+============================================================
+
+Before processing:
+
+Department checks:
+- Consent exists
+- Consent is valid
+- Purpose matches request
+- Data scope is allowed
+- Recipient is authorized
+- Consent is not expired/revoked
+
+If invalid:
+Do NOT process.
+
+Return:
+CONSENT_INVALID
+
+
+============================================================
+10. APPLICATION WORKFLOW
+============================================================
+
+Incoming request
+      |
+Consent validation
+      |
+Data validation
+      |
+Document verification
+      |
+Officer review
+      |
++-----+----------------+
+|                      |
+APPROVE             PROBLEM
+|                      |
+SUCCESS            ACTION_REQUIRED
+                       |
+                 Citizen responds
+                       |
+                    Reprocess
+                       |
+                    SUCCESS
+
+
+============================================================
+11. FAILURE HANDLING
+============================================================
+
+Department must expose simulated failure states.
+
+Examples:
+- API unavailable
+- Timeout
+- Invalid data
+- Duplicate request
+- Consent expired
+- Internal processing error
+
+Return machine-readable status/error.
+
+Example:
+503 SERVICE_UNAVAILABLE
+
+GovMesh should queue and retry.
+
+Department UI should show:
+"Service temporarily unavailable."
+
+
+============================================================
+12. OFFICER ACTION REQUIRED
+============================================================
+
+Officer can request:
+
+- New document
+- Correct address
+- Missing information
+- Clarification
+
+Citizen receives this through GovMesh.
+
+Status:
+ACTION_REQUIRED
+
+
+============================================================
+13. APPLICATION DETAILS SCREEN
+============================================================
+
+Display:
+
+Application ID
+Citizen reference
+Service
+Received time
+Consent
+Data
+Documents
+Current status
+Workflow history
+
+Actions:
+[Verify]
+[Approve]
+[Reject]
+[Request Information]
+
+
+============================================================
+14. AUDIT LOG
+============================================================
+
+Record:
+- Officer ID
+- Application ID
+- Action
+- Timestamp
+- Previous status
+- New status
+- Reason
+- Correlation ID
+
+Example:
+
+Officer R-102
+APPROVE
+GM-2026-000124
+10:08 AM
+
+
+============================================================
+15. NOTIFICATIONS
+============================================================
+
+Department notifications:
+- New application
+- Consent received
+- Citizen response
+- Retry received
+- Escalation
+- Workflow completion
+
+Citizen-facing notifications are sent by GovMesh.
+
+
+============================================================
+16. DEPARTMENT SYSTEM HEALTH
+============================================================
+
+Show:
+- API status
+- Database status
+- Queue status
+- Last successful request
+- Failed requests
+- Processing latency
+
+MVP:
+A simple health dashboard is enough.
+
+
+============================================================
+17. RECOMMENDED TECH STACK
+============================================================
+
+Frontend:
+React.js + TypeScript
+
+Backend:
+Python FastAPI
+
+Protocol:
+REST
+
+Data:
+JSON
+
+Database:
+PostgreSQL
+
+Authentication:
+Keycloak / JWT
+
+Container:
+Docker
+
+
+============================================================
+18. DEPARTMENT 1 MVP SCREENS
+============================================================
+
+01. Login
+02. Dashboard
+03. Incoming Applications
+04. Application Details
+05. Document Verification
+06. Officer Review
+07. Request Additional Information
+08. Completed Applications
+09. Rejected Applications
+10. Audit Log
+11. System Health
+12. Profile / Logout
+
+
+============================================================
+19. DEMO ROLE
+============================================================
+
+Department 1 should be the FIRST processing department.
+
+Citizen:
+Address Change
+        |
+GovMesh
+        |
+Revenue Department
+        |
+Verify address
+        |
+SUCCESS
+        |
+GovMesh sends result
+        |
+Department 2 begins
+
+
+============================================================
+20. SUCCESS CRITERIA
+============================================================
+
+The SIH evaluator should clearly see:
+
+1. GovMesh sends a standardized request.
+2. Revenue system receives it through REST/JSON.
+3. Revenue uses its own internal data model.
+4. GovMesh maps canonical data to Revenue format.
+5. Officer verifies the request.
+6. Department sends structured result.
+7. GovMesh updates the unified citizen timeline.
+8. Full audit trail is retained.
+
+FINAL MESSAGE:
+"Revenue is an independent system. GovMesh interoperates with it
+without replacing it."

@@ -1,0 +1,3 @@
+# Netlify SPA Redirect Rules
+# Redirect all request paths to index.html so React Router handles the navigation routing internally
+/*    /index.html   200

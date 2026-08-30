@@ -1,0 +1,470 @@
+GOVMESH – SIH26129
+DEPARTMENT 2 – FOOD, CIVIL SUPPLIES & CONSUMER PROTECTION
+SIMULATED DEPARTMENT SYSTEM – MVP REQUIREMENTS
+============================================================
+
+PURPOSE
+-------
+Department 2 represents the Food, Civil Supplies & Consumer Protection
+Department in the GovMesh demonstration.
+
+Its primary purpose is to prove that GovMesh can integrate a department
+using a DIFFERENT technology/protocol from Department 1.
+
+Recommended simulated integration:
+SOAP + XML
+
+This creates a visible interoperability challenge:
+Department 1 = REST/JSON
+Department 2 = SOAP/XML
+
+
+============================================================
+1. DEPARTMENT LOGIN
+============================================================
+
+MUST HAVE:
+- Officer login
+- Username/password or simulated OTP
+- Session management
+- Role-based access
+- Logout
+- Session timeout
+
+Roles:
+- Food Supply Officer
+- Senior Officer
+- Department Admin
+- Auditor
+
+
+============================================================
+2. DEPARTMENT DASHBOARD
+============================================================
+
+Show:
+
+Incoming Requests
+Pending
+Processing
+Completed
+Rejected
+Action Required
+Failed
+System Status
+
+Example:
+
+FOOD & CIVIL SUPPLIES
+
+Ration/Record Update Requests     27
+Pending                            6
+Processing                         4
+Completed                         15
+Action Required                    2
+
+SOAP SERVICE:
+ONLINE
+
+
+============================================================
+3. PRIMARY MVP USE CASE
+============================================================
+
+ADDRESS UPDATE / RATION RECORD UPDATE
+
+After Revenue verifies the citizen's new address, GovMesh can send
+the relevant approved data to Department 2.
+
+Citizen does NOT manually submit the same information again.
+
+
+============================================================
+4. CONSENT VALIDATION
+============================================================
+
+Department 2 must verify:
+
+- Consent ID
+- Purpose
+- Requested fields
+- Department identity
+- Consent expiry
+- Revocation status
+
+Example:
+
+Purpose:
+Ration/PDS address update
+
+Allowed:
+Name
+Address
+Verification result
+
+Not allowed:
+Unrelated citizen information
+
+
+============================================================
+5. SOAP/XML INTEGRATION
+============================================================
+
+Department 2 should deliberately expose a SOAP service.
+
+Example operation:
+
+UpdateRationAddress
+
+Request:
+
+<UpdateRationAddress>
+    <ApplicationId>GM-2026-000124</ApplicationId>
+    <CitizenName>XXXXX</CitizenName>
+    <Address>XXXXX</Address>
+    <RevenueVerified>true</RevenueVerified>
+    <ConsentId>CONSENT-00124</ConsentId>
+</UpdateRationAddress>
+
+Response:
+
+<UpdateRationAddressResponse>
+    <ApplicationId>GM-2026-000124</ApplicationId>
+    <Status>SUCCESS</Status>
+</UpdateRationAddressResponse>
+
+GovMesh converts its canonical JSON representation into XML/SOAP.
+
+
+============================================================
+6. LEGACY DATA MODEL
+============================================================
+
+Department 2 should intentionally use a different internal structure.
+
+Example:
+
+ration_card_no
+holder_name
+house_address
+taluka_code
+district_code
+verification_flag
+update_status
+
+GovMesh canonical model:
+
+citizen.name
+citizen.address
+citizen.address.district
+verification.status
+
+Schema mapping is performed by the interoperability layer.
+
+
+============================================================
+7. RATION / RECORD SEARCH
+============================================================
+
+Officer can search by:
+
+- Application ID
+- Citizen reference
+- Ration card number
+- Name
+- Address
+
+Show:
+- Existing record
+- Incoming proposed update
+- Verification result
+- Consent
+- Officer decision
+
+
+============================================================
+8. RECORD UPDATE WORKFLOW
+============================================================
+
+GovMesh Request
+      |
+SOAP/XML received
+      |
+Consent validation
+      |
+Data validation
+      |
+Existing record lookup
+      |
+Conflict check
+      |
+Officer review / policy validation
+      |
+UPDATE
+      |
+Result -> GovMesh
+
+
+============================================================
+9. DATA CONFLICT DETECTION
+============================================================
+
+Example:
+
+Incoming:
+Address = A
+
+Existing Food Department record:
+Address = B
+
+System displays:
+
+DATA CONFLICT
+
+Existing record differs from requested update.
+
+Actions:
+[Request Clarification]
+[Send for Officer Review]
+
+
+============================================================
+10. DUPLICATE DETECTION
+============================================================
+
+Detect:
+- Duplicate application
+- Duplicate update request
+- Already completed update
+- Repeated message
+
+Use:
+Application ID
+Correlation ID
+Citizen reference
+
+
+============================================================
+11. FAILURE & SOAP FAULT HANDLING
+============================================================
+
+Simulate:
+
+- SOAP service unavailable
+- Timeout
+- Invalid XML
+- Validation failure
+- Duplicate request
+- Business-rule rejection
+
+Example:
+
+SOAP FAULT:
+SERVICE_TEMPORARILY_UNAVAILABLE
+
+GovMesh:
+Queue
+Retry
+Track
+Notify
+
+Citizen should see:
+"Food Department service is temporarily unavailable.
+Your request is safely queued."
+
+
+============================================================
+12. IDEMPOTENCY
+============================================================
+
+Important technical feature.
+
+If GovMesh retries the same request, Department 2 must not
+perform the same update twice.
+
+Use:
+- Application ID
+- Request ID
+- Idempotency key
+
+Example:
+
+Request:
+GM-2026-000124
+
+If already processed:
+Return previous result instead of creating another update.
+
+
+============================================================
+13. OFFICER REVIEW
+============================================================
+
+Screen should show:
+
+Citizen:
+XXXXX
+
+Application:
+GM-2026-000124
+
+Current record:
+Address A
+
+Requested record:
+Address B
+
+Revenue verification:
+VALID
+
+Consent:
+VALID
+
+Actions:
+[Approve Update]
+[Reject]
+[Request Information]
+
+
+============================================================
+14. AUDIT LOG
+============================================================
+
+Capture:
+
+- SOAP request received
+- Consent checked
+- Validation performed
+- Officer action
+- Record update
+- Response sent
+- Retry events
+
+Fields:
+Timestamp
+Application ID
+Correlation ID
+Officer ID
+Action
+Result
+
+
+============================================================
+15. DEPARTMENT NOTIFICATIONS
+============================================================
+
+Notify officers for:
+- New request
+- Retry
+- Citizen response
+- Conflict
+- Escalation
+- Completion
+
+
+============================================================
+16. SYSTEM MONITORING
+============================================================
+
+Show:
+- SOAP service status
+- Request count
+- Successful requests
+- Failed requests
+- Average response time
+- Pending requests
+
+Useful SIH demo metric:
+
+REST -> GovMesh -> SOAP
+SUCCESS RATE: 100%
+
+
+============================================================
+17. RECOMMENDED TECH STACK
+============================================================
+
+Frontend:
+React.js + TypeScript
+
+Backend:
+Java Spring Boot
+
+Integration:
+SOAP/XML
+
+Database:
+PostgreSQL or MySQL
+
+Authentication:
+Keycloak / JWT
+
+Container:
+Docker
+
+Optional:
+WSDL for service definition
+
+
+============================================================
+18. DEPARTMENT 2 MVP SCREENS
+============================================================
+
+01. Login
+02. Dashboard
+03. Incoming Requests
+04. Ration/Record Search
+05. Application Details
+06. Conflict Review
+07. Officer Approval
+08. Request Information
+09. Failed/Retry Requests
+10. Completed Requests
+11. Audit Logs
+12. System Health
+13. Profile
+
+
+============================================================
+19. DEMO ROLE
+============================================================
+
+Department 2 is the interoperability proof point.
+
+Revenue:
+REST/JSON
+     |
+GovMesh Canonical Model
+     |
+Schema Transformation
+     |
+SOAP/XML
+     |
+Food Department
+     |
+Result
+     |
+GovMesh
+     |
+Citizen Timeline
+
+
+============================================================
+20. SUCCESS CRITERIA
+============================================================
+
+The evaluator should see:
+
+1. Department 2 is technologically different from Department 1.
+2. GovMesh receives standardized internal data.
+3. GovMesh transforms the data.
+4. SOAP/XML request is generated.
+5. Department validates consent.
+6. Department processes the request.
+7. SOAP response is transformed back.
+8. Citizen receives one unified status.
+9. Retry does not duplicate the update.
+
+FINAL MESSAGE:
+"GovMesh enables interoperability even when departments use
+different protocols and data models."

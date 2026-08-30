@@ -1,0 +1,369 @@
+1. What query should you give?
+
+For your MVP, I strongly recommend using one realistic query that genuinely requires all three departments.
+
+Best demo query
+
+"I have shifted to a new address. I want to update my address in my government records, including my Revenue records, ration card records, and relevant local rural government records."
+
+This is much better than simply typing:
+
+"Change my address."
+
+Because your first query explicitly demonstrates the need for three different government systems.
+
+2. What happens after you submit it?
+Step 1 — Citizen enters query
+Citizen App
+
+┌──────────────────────────────────────────────┐
+│ What do you need help with?                  │
+│                                              │
+│ I have shifted to a new address. I want to   │
+│ update my address in my government records,  │
+│ including my Revenue records, ration card    │
+│ records, and relevant local rural government │
+│ records.                                     │
+│                                              │
+│              [ Continue ]                    │
+└──────────────────────────────────────────────┘
+3. LLM understands the query
+
+The LLM should not call Department 1, 2 or 3.
+
+Instead, it produces a structured intent.
+
+For example:
+
+{
+  "intent": "ADDRESS_CHANGE",
+  "entities": {
+    "service": "government_record_address_update"
+  },
+  "suggested_services": [
+    "REVENUE_ADDRESS_UPDATE",
+    "RATION_ADDRESS_UPDATE",
+    "RURAL_RECORD_UPDATE"
+  ]
+}
+
+The LLM essentially says:
+
+"This citizen wants an address change. These are the government services that may be involved."
+
+4. GovMesh takes over
+
+Now the GovMesh Workflow Orchestrator receives that intent.
+
+             Citizen Query
+                   ↓
+             LLM / AI Layer
+                   ↓
+          Structured Intent
+                   ↓
+        ┌─────────────────────┐
+        │ GOVMESH ORCHESTRATOR│
+        └──────────┬──────────┘
+                   ↓
+             Service Registry
+                   ↓
+          Workflow Definition
+
+The Service Registry knows:
+
+ADDRESS_CHANGE_WORKFLOW
+
+        ↓
+
+1. Revenue Address Verification
+
+        ↓
+
+2. Food & Civil Supplies
+   Ration Address Update
+
+        ↓
+
+3. Rural Development
+   Local Record Update
+5. Citizen gets a confirmation screen
+
+This is very important.
+
+Don't automatically send the information.
+
+Show:
+
+┌──────────────────────────────────────────┐
+│ YOUR REQUEST                             │
+├──────────────────────────────────────────┤
+│ Address Change                           │
+│                                          │
+│ Departments involved:                   │
+│                                          │
+│ ✓ Revenue & Forest Department            │
+│ ✓ Food & Civil Supplies Department       │
+│ ✓ Rural Development Department           │
+│                                          │
+│ Information required:                   │
+│ • Name                                   │
+│ • New Address                            │
+│ • Supporting Address Proof               │
+│                                          │
+│ Purpose: Government record update        │
+│                                          │
+│        [ Review Consent ]                │
+└──────────────────────────────────────────┘
+
+Then the citizen gives consent.
+
+6. After consent, the actual connections happen
+
+This is where your project becomes technically interesting.
+
+                  CITIZEN
+                     │
+                     ▼
+              Citizen Application
+                     │
+                     ▼
+                 LLM Layer
+                     │
+                     ▼
+              GovMesh Core
+                     │
+       ┌─────────────┼──────────────┐
+       │             │              │
+       ▼             ▼              ▼
+ Revenue Adapter  Food Adapter  Rural Adapter
+       │             │              │
+       ▼             ▼              ▼
+ Revenue System   Food System    Rural System
+
+Each department doesn't need to know about the other departments.
+
+GovMesh is the intermediary.
+
+7. Department 1 connection
+
+Your Revenue system uses:
+
+REST + JSON
+
+GovMesh sends something like:
+
+{
+  "application_id": "GM-2026-000124",
+  "service": "ADDRESS_CHANGE",
+  "citizen": {
+    "name": "Citizen Name",
+    "address": "New Address"
+  },
+  "consent_id": "CONSENT-00124"
+}
+
+Revenue processes it.
+
+GovMesh
+   ↓
+REST Adapter
+   ↓
+Revenue API
+   ↓
+Verification
+   ↓
+SUCCESS
+
+Then:
+
+Revenue → GovMesh
+
+STATUS:
+VERIFIED
+8. Department 2 connection
+
+Now GovMesh takes the required result from Department 1.
+
+For example:
+
+Revenue Verification
+       ↓
+VERIFIED
+       ↓
+GovMesh Workflow
+       ↓
+Food Department
+
+But Department 2 uses:
+
+SOAP + XML
+
+So GovMesh transforms the canonical data:
+
+GovMesh Canonical Data
+        ↓
+SOAP Adapter
+        ↓
+XML
+        ↓
+Food Department
+
+Example:
+
+<UpdateRationAddress>
+    <ApplicationId>GM-2026-000124</ApplicationId>
+    <CitizenName>Citizen Name</CitizenName>
+    <Address>New Address</Address>
+    <RevenueVerified>true</RevenueVerified>
+    <ConsentId>CONSENT-00124</ConsentId>
+</UpdateRationAddress>
+
+Food Department processes it and returns:
+
+SUCCESS
+9. Department 3 connection
+
+Then GovMesh triggers Department 3.
+
+But this system is deliberately designed as a legacy system.
+
+So instead of REST:
+
+GovMesh
+   ↓
+Legacy Adapter
+   ↓
+CSV
+   ↓
+SFTP / File Transfer
+   ↓
+Rural Development System
+
+Example:
+
+application_id,citizen_name,address,verified
+GM-2026-000124,Citizen Name,New Address,true
+
+Department 3 processes the file and returns the result.
+
+10. Your complete demonstration
+
+Your judges will see this:
+
+CITIZEN
+   │
+   │ "I shifted to a new address..."
+   ▼
+┌──────────────────────┐
+│     LLM / AI         │
+│ Intent Detection     │
+└──────────┬───────────┘
+           │
+           ▼
+┌─────────────────────────────┐
+│        GOVMESH CORE         │
+│                             │
+│ Service Registry            │
+│ Canonical Data Model        │
+│ Consent Engine              │
+│ Workflow Orchestrator       │
+│ Schema Mapping              │
+│ Audit                       │
+└─────────────┬───────────────┘
+              │
+              ▼
+       ┌──────────────┐
+       │ Workflow     │
+       │ ADDRESS      │
+       │ CHANGE       │
+       └──────┬───────┘
+              │
+     ┌────────┼────────┐
+     ▼        ▼        ▼
+ Revenue    Food     Rural
+ REST       SOAP     Legacy
+ JSON       XML      CSV/SFTP
+     │        │        │
+     ▼        ▼        ▼
+    ✅       ✅       ✅
+     │        │        │
+     └────────┼────────┘
+              ▼
+       Unified Status
+              │
+              ▼
+          CITIZEN APP
+🔥 Even better: show a failure
+
+This is where I recommend making your demo memorable.
+
+Suppose Department 2 temporarily fails:
+
+Revenue
+   ↓
+✅ COMPLETED
+
+Food & Civil Supplies
+   ↓
+❌ TEMPORARILY UNAVAILABLE
+
+Rural Development
+   ↓
+⏸ WAITING
+
+GovMesh automatically:
+
+Failure
+   ↓
+Exception Handler
+   ↓
+RabbitMQ Queue
+   ↓
+Retry
+   ↓
+Food Department
+   ↓
+SUCCESS
+   ↓
+Rural Department triggered
+
+Citizen sees:
+
+ADDRESS UPDATE
+
+Revenue Department             ✅ Completed
+
+Food & Civil Supplies          🔄 Retrying
+
+Rural Development              ⏳ Waiting
+
+----------------------------------
+
+You don't need to do anything.
+
+GovMesh will automatically retry
+the unavailable service.
+
+Then:
+
+Food & Civil Supplies           ✅
+Rural Development               ✅
+
+OVERALL REQUEST                 ✅ COMPLETED
+🎯 So what exact query should your team use?
+
+For your main SIH demo, use:
+
+"I have shifted to a new address. I want to update my address in my government records, including my Revenue records, ration card records, and relevant local rural government records."
+
+Then demonstrate these three mappings:
+Citizen request	GovMesh service	Department	Protocol
+Update Revenue record	REVENUE_ADDRESS_UPDATE	Revenue & Forest	REST/JSON
+Update ration record	RATION_ADDRESS_UPDATE	Food & Civil Supplies	SOAP/XML
+Update local rural record	RURAL_RECORD_UPDATE	Rural Development	CSV/SFTP
+
+This is much stronger than making the LLM directly "connect" to three departments.
+
+Your core innovation should be:
+
+The LLM understands the citizen's intent; GovMesh determines the approved service workflow; the interoperability layer translates and routes data to heterogeneous departmental systems; and the citizen receives one unified status.

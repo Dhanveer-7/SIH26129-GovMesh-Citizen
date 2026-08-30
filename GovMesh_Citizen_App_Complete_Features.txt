@@ -1,0 +1,1273 @@
+GOVMESH – SIH26129
+CITIZEN APPLICATION
+COMPLETE FEATURES, SCREENS & REQUIREMENTS
+============================================================
+
+Purpose:
+This document defines the complete Citizen App requirements for the
+GovMesh SIH26129 prototype, based on the project solution documents and
+the discussed MVP/demo flow.
+
+Core principle:
+The Citizen App is NOT another replacement government portal.
+It is the citizen-facing entry point into GovMesh, which coordinates
+existing/ simulated government systems through interoperability,
+consent and workflow orchestration.
+
+Core citizen journey:
+LOGIN
+  -> HOME
+  -> DESCRIBE SERVICE / SELECT SERVICE
+  -> IDENTIFY REQUIRED DEPARTMENTS
+  -> VIEW DATA + PURPOSE
+  -> GIVE CONSENT
+  -> UPLOAD DOCUMENTS
+  -> VALIDATION
+  -> WORKFLOW START
+  -> UNIFIED TIMELINE
+  -> NOTIFICATIONS
+  -> COMPLETION / ACTION REQUIRED
+
+
+============================================================
+1. LOGIN & AUTHENTICATION
+============================================================
+
+MUST HAVE
+
+1.1 Welcome Screen
+- GovMesh logo/name
+- Short explanation:
+  "One citizen request. Multiple government systems. One coordinated
+   workflow."
+- Login button
+- Register button
+- Help / privacy link
+
+1.2 Citizen Registration
+For the MVP, use simulated identity verification.
+Production identity integration requires government authorization.
+
+Fields:
+- Full name
+- Mobile number
+- Email (optional)
+- Citizen reference ID / simulated government ID
+- Password/PIN if used by the prototype
+
+1.3 Login
+Recommended MVP:
+- Mobile number
+- OTP
+- Optional app PIN
+
+Alternative prototype:
+- Username + password
+- OTP simulation
+
+1.4 Secure Session
+- JWT/OIDC-style authentication
+- Session timeout
+- Logout from all devices
+- Token refresh
+- Secure storage of authentication tokens
+
+1.5 Re-authentication
+Require additional authentication for sensitive actions such as:
+- Giving consent
+- Revoking consent
+- Changing profile information
+- Submitting sensitive documents
+- Confirming important workflow actions
+
+
+============================================================
+2. CITIZEN PROFILE
+============================================================
+
+Profile should contain:
+
+- Name
+- Citizen reference ID
+- Verified mobile number
+- Email
+- Address
+- District
+- State
+- Preferred language
+- Profile verification status
+
+Profile actions:
+- Edit allowed information
+- Verify contact details
+- View verification status
+- Manage notification preferences
+- Manage security settings
+- Logout
+
+IMPORTANT:
+The citizen profile should not become a huge centralized data silo.
+Only required information should be stored and shared.
+
+
+============================================================
+3. HOME DASHBOARD
+============================================================
+
+The home screen should immediately show:
+
+A. "What do you need help with?"
+B. Start a new service request
+C. Active requests
+D. Recent notifications
+E. Pending actions
+F. Quick access to application tracking
+
+Example:
+
+------------------------------------------------------------
+Hello, Citizen
+
+What do you need help with?
+[ Describe your request ]
+
+Quick Services
+[ Address Change ]
+[ Certificate ]
+[ Benefit / Scheme ]
+[ Other Service ]
+
+ACTIVE REQUESTS
+Address Update                         2/3 completed
+Application ID: GM-2026-000124
+
+PENDING ACTION
+Consent required – Food Department
+
+RECENT
+Department C recovered and workflow resumed
+------------------------------------------------------------
+
+
+============================================================
+4. NATURAL-LANGUAGE SERVICE REQUEST
+============================================================
+
+This is one of the important intelligent features.
+
+Citizen can type or speak a request in natural language.
+
+Example:
+"I have moved to a new address and want to update my government records."
+
+The AI/intent module:
+- Detects the user's intent
+- Identifies the likely service
+- Suggests relevant government departments/services
+- Extracts useful entities such as address
+- Does NOT autonomously execute government actions
+
+Output:
+
+Detected request:
+ADDRESS CHANGE
+
+Potentially affected services:
+1. Revenue Department
+2. Food & Civil Supplies Department
+3. Rural Development Department
+
+Button:
+[Review & Continue]
+
+IMPORTANT:
+AI is assistive only.
+The deterministic workflow engine and approved policy rules control
+actual service execution.
+
+
+============================================================
+5. SERVICE DISCOVERY
+============================================================
+
+Citizen can also select a service manually.
+
+Service Registry should expose:
+- Service name
+- Department
+- Description
+- Required documents
+- Required data
+- Purpose
+- Expected workflow steps
+- Current availability
+- Estimated processing information where available
+
+Example:
+
+ADDRESS UPDATE
+Revenue Department
+Food & Civil Supplies
+Rural Development
+
+[Start Request]
+
+
+============================================================
+6. SERVICE IMPACT / DEPARTMENT PREVIEW
+============================================================
+
+Before consent, show exactly what will happen.
+
+Example:
+
+Your request may require:
+
+1. Revenue Department
+   Purpose: Verify/update address record
+
+2. Food & Civil Supplies
+   Purpose: Update eligible ration/PDS record
+
+3. Rural Development
+   Purpose: Update relevant local service record
+
+Show:
+- Department
+- Service
+- Data requested
+- Purpose
+- Workflow dependency
+- Optional/mandatory status
+
+
+============================================================
+7. CONSENT MANAGEMENT
+============================================================
+
+This is a CORE feature.
+
+Before data is shared, the citizen must see:
+
+WHO:
+Requesting department/service
+
+WHAT:
+Exact data fields being shared
+
+WHY:
+Purpose of data sharing
+
+HOW LONG:
+Consent duration
+
+WHERE:
+Destination department/system
+
+Example:
+
+------------------------------------------------------------
+CONSENT REQUEST
+
+Food & Civil Supplies Department
+
+Purpose:
+Address record update
+
+Data requested:
+- Name
+- Address
+- Supporting document verification result
+
+Duration:
+30 days
+
+[ View Privacy Details ]
+
+[ APPROVE ]
+[ REJECT ]
+------------------------------------------------------------
+
+Consent states:
+- REQUESTED
+- APPROVED
+- REJECTED
+- EXPIRED
+- REVOKED
+
+Citizen should be able to:
+- View active consent
+- View expired consent
+- Revoke eligible consent
+- See consent history
+
+
+============================================================
+8. DOCUMENT UPLOAD
+============================================================
+
+Citizen can upload supporting documents.
+
+Supported prototype types:
+- PDF
+- JPG
+- PNG
+
+Example:
+- Address proof
+- Residence certificate
+- Supporting government document
+
+Features:
+- Camera capture
+- File picker
+- Preview
+- Delete before submission
+- Upload progress
+- File size/type validation
+- Encryption in transit
+- Secure storage
+
+Document screen:
+
+Document:
+Address Proof
+
+Status:
+Uploaded
+
+AI extraction:
+Name       ✓
+Address    ✓
+Issue Date ✓
+
+Confidence:
+96%
+
+[Continue]
+
+
+============================================================
+9. AI DOCUMENT INTELLIGENCE
+============================================================
+
+AI pipeline:
+
+Document
+  ->
+OCR
+  ->
+Document classification
+  ->
+Entity extraction
+  ->
+Field normalization
+  ->
+Validation
+  ->
+Confidence score
+  ->
+Human review if confidence is low
+
+Example:
+Residence Certificate
+
+Extracted:
+Name: XXXXX
+Address: XXXXX
+Issue Date: XXXXX
+
+If confidence is low:
+"Some information could not be confidently verified.
+Please review or wait for authorized officer verification."
+
+AI must NOT silently modify authoritative government records.
+
+
+============================================================
+10. REVIEW BEFORE SUBMISSION
+============================================================
+
+Show a complete summary before starting the workflow.
+
+Citizen reviews:
+
+REQUEST:
+Address Change
+
+DATA:
+Name
+New Address
+Supporting Document
+
+DEPARTMENTS:
+Revenue ✓
+Food & Civil Supplies ✓
+Rural Development ✓
+
+CONSENTS:
+Revenue – Approved
+Food – Approved
+Rural Development – Approved
+
+DOCUMENTS:
+Address Proof ✓
+
+Button:
+[ Confirm & Start Workflow ]
+
+This confirmation should be an explicit citizen action.
+
+
+============================================================
+11. APPLICATION CREATION
+============================================================
+
+When confirmed, GovMesh creates:
+
+- Application ID
+- Workflow ID
+- Timestamp
+- Request type
+- Citizen reference
+- Consent references
+- Department steps
+- Correlation ID
+
+Example:
+
+Application ID:
+GM-2026-000124
+
+Workflow:
+ADDRESS_CHANGE_V1
+
+Status:
+IN PROGRESS
+
+
+============================================================
+12. UNIFIED APPLICATION TRACKING
+============================================================
+
+This is one of the MOST IMPORTANT Citizen App features.
+
+Citizen should NOT have to visit three different department portals.
+
+Provide one timeline.
+
+Example:
+
+------------------------------------------------------------
+ADDRESS CHANGE
+GM-2026-000124
+
+10:05 AM  Request submitted          ✓
+10:06 AM  Consent verified            ✓
+10:07 AM  Document validated          ✓
+10:08 AM  Revenue Department          ✓
+10:09 AM  Food & Civil Supplies       ✓
+10:10 AM  Rural Development           Processing
+------------------------------------------------------------
+
+Each step should show:
+- Department
+- Action
+- Timestamp
+- Status
+- Reason if failed
+- Required citizen action if any
+
+
+============================================================
+13. WORKFLOW STATUS
+============================================================
+
+Overall statuses:
+
+- DRAFT
+- SUBMITTED
+- CONSENT_PENDING
+- VALIDATING
+- IN_PROGRESS
+- ACTION_REQUIRED
+- PARTIALLY_COMPLETED
+- FAILED
+- RETRYING
+- COMPLETED
+- CANCELLED
+
+Citizen-friendly labels should be used in the UI.
+
+Example:
+Backend: RETRYING
+Citizen UI:
+"One department is temporarily unavailable. We are retrying
+automatically. No action is required from you."
+
+
+============================================================
+14. FAILURE & AUTOMATIC RECOVERY VIEW
+============================================================
+
+This feature is important for the SIH demo.
+
+If Department C fails:
+
+Department C
+Status: Temporarily unavailable
+
+GovMesh:
+- Detected failure
+- Queued request
+- Retry scheduled
+
+Citizen sees:
+
+------------------------------------------------------------
+Rural Development
+
+Status: RETRYING
+
+The department system is temporarily unavailable.
+GovMesh will retry automatically.
+
+Your application has NOT been lost.
+
+Last update: 10:11 AM
+------------------------------------------------------------
+
+When recovered:
+"Rural Development processing resumed successfully."
+
+
+============================================================
+15. ACTION REQUIRED
+============================================================
+
+If a department requires additional information:
+
+Example:
+
+ACTION REQUIRED
+
+Revenue Department requested:
+- Clearer address proof
+
+[Upload Document]
+
+Citizen should be able to:
+- View reason
+- Upload required document
+- Submit response
+- Continue workflow
+
+
+============================================================
+16. NOTIFICATIONS
+============================================================
+
+Channels:
+- In-app notifications
+- Email simulation
+- SMS simulation
+
+Notification events:
+- Consent request
+- Workflow started
+- Step completed
+- Action required
+- Department failure
+- Automatic retry
+- Workflow resumed
+- Workflow completed
+
+Example:
+
+"Your address update request has been accepted by Revenue Department."
+
+"Food & Civil Supplies system is temporarily unavailable.
+Your request is queued for automatic retry."
+
+
+============================================================
+17. NOTIFICATION CENTER
+============================================================
+
+Sections:
+- All
+- Unread
+- Action Required
+- Completed
+- System Updates
+
+Each notification:
+- Title
+- Description
+- Timestamp
+- Related application ID
+- Priority
+- Read/unread status
+
+
+============================================================
+18. APPLICATION HISTORY
+============================================================
+
+Citizen can view previous requests.
+
+Each record:
+- Application ID
+- Service
+- Date
+- Departments involved
+- Final status
+- Completion date
+- Documents submitted
+- Consent summary
+
+Example:
+
+PAST APPLICATIONS
+
+GM-2026-000124
+Address Change
+COMPLETED
+
+GM-2026-000087
+Residence Certificate
+COMPLETED
+
+
+============================================================
+19. CONSENT HISTORY
+============================================================
+
+Dedicated consent history screen.
+
+Show:
+- Consent ID
+- Service
+- Department
+- Data scope
+- Purpose
+- Created date
+- Expiry date
+- Status
+- Revocation status
+
+Example:
+
+CONSENT-00124
+Food Department
+Address update
+Approved
+Expires: 30 Sep 2026
+
+
+============================================================
+20. DATA SHARING TRANSPARENCY
+============================================================
+
+Citizen should always know:
+
+- Which department received data
+- What data was shared
+- Why it was shared
+- When it was shared
+- Workflow/application associated with it
+- Whether consent was active
+
+Avoid showing unnecessary sensitive backend information.
+
+
+============================================================
+21. PROFILE DATA / MASTER DATA VIEW
+============================================================
+
+The citizen can see the data GovMesh currently holds for service
+coordination.
+
+Example:
+
+MY BASIC INFORMATION
+
+Name       XXXXX
+Address    XXXXX
+District   XXXXX
+
+Source:
+Citizen-provided / verified source
+
+If conflict exists:
+
+DATA CONFLICT DETECTED
+
+Revenue record:
+Address A
+
+Department record:
+Address B
+
+Status:
+Pending authorized review
+
+IMPORTANT RULE:
+Authoritative government records must NEVER be automatically
+overwritten by AI or GovMesh.
+
+
+============================================================
+22. DATA CONFLICT ALERT
+============================================================
+
+If GovMesh detects:
+
+Name mismatch
+Date mismatch
+Address mismatch
+Duplicate record
+Unexpected change
+
+Citizen should see a simple explanation.
+
+Example:
+
+"We found inconsistent information across connected systems.
+Your request has been sent for authorized verification."
+
+Do not expose internal fraud/anomaly scores unnecessarily.
+
+
+============================================================
+23. DIGITAL DOCUMENT WALLET
+============================================================
+
+Optional but useful.
+
+Citizen can view documents uploaded for active/previous workflows.
+
+Features:
+- Document list
+- Type
+- Related application
+- Upload date
+- Verification status
+- Delete where policy allows
+
+Do not treat this as a permanent universal government document store
+unless officially authorized.
+
+
+============================================================
+24. SERVICE STATUS / SYSTEM AVAILABILITY
+============================================================
+
+Citizen can see whether a required department service is:
+
+- Available
+- Processing
+- Temporarily unavailable
+- Maintenance
+- Retrying
+
+Avoid exposing technical infrastructure details.
+
+Instead of:
+"SOAP endpoint HTTP 503"
+
+Show:
+"Food Department service is temporarily unavailable."
+
+
+============================================================
+25. HELP & SUPPORT
+============================================================
+
+Include:
+- FAQ
+- How GovMesh works
+- How consent works
+- Data privacy explanation
+- Application help
+- Report a problem
+- Contact/helpdesk simulation
+
+Important:
+Support should explain that GovMesh coordinates systems; it does not
+replace the authority of the individual department.
+
+
+============================================================
+26. PRIVACY & SECURITY CENTER
+============================================================
+
+Citizen should be able to view:
+
+- Login/security activity
+- Active sessions
+- Consent history
+- Data-sharing history
+- Privacy policy
+- Data retention information
+- Security notifications
+
+Security actions:
+- Change PIN/password
+- Logout all devices
+- Re-authenticate
+- Manage notifications
+
+
+============================================================
+27. ACCESSIBILITY & LANGUAGE
+============================================================
+
+Recommended:
+- English
+- Marathi
+- Hindi
+
+Accessibility:
+- Large text option
+- High contrast
+- Screen-reader friendly labels
+- Simple language
+- Voice input for service request
+- Clear status icons/text
+- Avoid technical terminology in citizen-facing screens
+
+
+============================================================
+28. CITIZEN APP NAVIGATION
+============================================================
+
+Recommended bottom navigation:
+
+HOME
+TRACK
+SERVICES
+NOTIFICATIONS
+PROFILE
+
+HOME:
+Start request + active requests
+
+TRACK:
+All current/previous applications
+
+SERVICES:
+Available service catalogue
+
+NOTIFICATIONS:
+Updates + action required
+
+PROFILE:
+Personal data + consent + security
+
+
+============================================================
+29. COMPLETE MVP SCREEN LIST
+============================================================
+
+MUST HAVE SCREENS
+
+01. Splash / Welcome
+02. Login
+03. OTP Verification
+04. Home Dashboard
+05. New Service Request
+06. Natural Language Request
+07. Detected Intent / Service Recommendation
+08. Department & Service Preview
+09. Consent Request
+10. Document Upload
+11. Document Preview
+12. Extracted Data Review
+13. Final Submission Review
+14. Application Created
+15. Unified Tracking Timeline
+16. Failure / Retry Status
+17. Action Required
+18. Notifications
+19. Application History
+20. Profile
+
+
+============================================================
+30. SHOULD-HAVE SCREENS
+============================================================
+
+21. Consent History
+22. Data Sharing History
+23. Document Wallet
+24. Data Conflict Notification
+25. Help / FAQ
+26. Privacy & Security Center
+27. Language Settings
+28. Notification Settings
+
+
+============================================================
+31. MVP DEMO FLOW
+============================================================
+
+The recommended SIH demo should be:
+
+STEP 1
+Citizen opens app.
+
+STEP 2
+Citizen logs in.
+
+STEP 3
+Citizen enters:
+"I changed my address."
+
+STEP 4
+AI identifies:
+ADDRESS_CHANGE
+
+STEP 5
+App shows:
+Revenue
+Food & Civil Supplies
+Rural Development
+
+STEP 6
+Citizen reviews data and purpose.
+
+STEP 7
+Citizen grants consent.
+
+STEP 8
+Citizen uploads address proof.
+
+STEP 9
+OCR extracts:
+Name
+Address
+Issue Date
+
+STEP 10
+Citizen reviews extracted information.
+
+STEP 11
+Citizen confirms submission.
+
+STEP 12
+GovMesh creates workflow.
+
+STEP 13
+Revenue system:
+SUCCESS
+
+STEP 14
+Food & Civil Supplies:
+SUCCESS
+
+STEP 15
+Rural Development:
+FAILURE
+
+STEP 16
+Citizen sees:
+"Temporary issue – automatic retry in progress."
+
+STEP 17
+GovMesh retries.
+
+STEP 18
+Rural Development:
+SUCCESS
+
+STEP 19
+Citizen sees one unified timeline:
+3/3 completed.
+
+STEP 20
+Citizen receives completion notification.
+
+
+============================================================
+32. WHAT THE CITIZEN SHOULD NOT SEE
+============================================================
+
+Do NOT expose:
+- Raw API keys
+- JWT contents
+- Internal service URLs
+- SOAP/XML payloads
+- Queue names
+- Database details
+- Internal exception stack traces
+- Infrastructure IP addresses
+- Internal security rules
+- Sensitive officer-only information
+
+Citizen sees understandable outcomes.
+Officer dashboard sees operational details.
+
+
+============================================================
+33. SECURITY REQUIREMENTS
+============================================================
+
+MUST HAVE:
+- HTTPS
+- Secure authentication
+- JWT/OIDC-style session
+- Role-based access
+- Secure token storage
+- Input validation
+- File validation
+- Rate limiting
+- Consent enforcement
+- Data minimization
+- Encryption in transit
+- Encryption at rest
+- Secure logout
+- Audit trail
+
+Sensitive actions:
+- Require re-authentication
+- Record audit event
+
+
+============================================================
+34. AUDIT TRANSPARENCY
+============================================================
+
+Citizen should have a simplified activity history.
+
+Example:
+
+10:05
+You submitted Address Change
+
+10:06
+You approved data sharing with Food Department
+
+10:08
+Revenue verification completed
+
+10:11
+Rural Development workflow resumed
+
+10:12
+Request completed
+
+The detailed cryptographic audit record remains an internal platform
+function.
+
+
+============================================================
+35. DATA MINIMIZATION RULE
+============================================================
+
+Citizen App must NOT ask for every possible personal detail.
+
+Only request information required for the selected service.
+
+Example:
+
+If Food Department only needs:
+Name + Address + verification result
+
+Do not send:
+Unrelated documents
+Unrelated personal information
+Unrelated service history
+
+
+============================================================
+36. DESIGN PRINCIPLE: SINGLE TIMELINE
+============================================================
+
+The most important UX promise:
+
+"One request -> one application ID -> one timeline."
+
+Citizen should not need:
+Portal A -> Portal B -> Portal C
+
+Instead:
+
+Citizen App
+    ->
+GovMesh
+    ->
+Multiple departments
+    ->
+One unified timeline
+
+
+============================================================
+37. DESIGN PRINCIPLE: AI IS ASSISTIVE
+============================================================
+
+AI can:
+- Understand natural-language request
+- Extract document information
+- Suggest relevant services
+- Suggest schema mappings
+- Detect possible inconsistencies
+
+AI cannot independently:
+- Approve government service
+- Change authoritative records
+- Grant consent
+- Transfer data without consent
+- Make legal decisions
+
+Final execution:
+Policy + consent + deterministic workflow.
+
+
+============================================================
+38. CITIZEN APP – MVP PRIORITY
+============================================================
+
+PRIORITY 1 – DEMO CRITICAL
+- Login
+- Home
+- Natural language request
+- Service detection
+- Consent
+- Document upload
+- Document extraction
+- Submission confirmation
+- Unified timeline
+- Failure/retry status
+- Notifications
+- Profile
+
+PRIORITY 2
+- Application history
+- Consent history
+- Data sharing history
+- Action required
+- Help
+
+PRIORITY 3
+- Voice input
+- Marathi/Hindi
+- Document wallet
+- Advanced privacy center
+- Advanced personalization
+
+
+============================================================
+39. BACKEND APIs NEEDED BY CITIZEN APP
+============================================================
+
+Example API endpoints:
+
+POST /auth/login
+POST /auth/verify-otp
+POST /service-request
+GET  /services
+GET  /services/{serviceId}
+POST /intent/classify
+POST /documents/upload
+POST /documents/{id}/extract
+POST /consent/{id}/approve
+POST /consent/{id}/reject
+POST /consent/{id}/revoke
+GET  /consents
+GET  /applications
+GET  /applications/{id}
+GET  /applications/{id}/timeline
+GET  /notifications
+PATCH /notifications/{id}/read
+GET  /profile
+PATCH /profile
+
+
+============================================================
+40. FINAL CITIZEN APP STRUCTURE
+============================================================
+
+                         CITIZEN APP
+                              |
+          +-------------------+-------------------+
+          |                   |                   |
+       Identity           Service             Profile
+       & Login            Request              & Security
+          |                   |
+          |          +--------+---------+
+          |          |                  |
+          |       AI Intent        Manual Service
+          |          |
+          |          +--------+---------+
+          |                   |
+          |              Service Preview
+          |                   |
+          |                Consent
+          |                   |
+          |              Documents
+          |                   |
+          |          OCR + Validation
+          |                   |
+          |             Confirmation
+          |                   |
+          +-------------------+
+                              |
+                        GovMesh Workflow
+                              |
+                    Unified Application ID
+                              |
+                       Single Timeline
+                              |
+               +--------------+--------------+
+               |              |              |
+            Dept A          Dept B         Dept C
+               |              |              |
+               +--------------+--------------+
+                              |
+                       Notifications
+                              |
+                           Citizen
+
+
+============================================================
+41. FINAL PRODUCT PRINCIPLE
+============================================================
+
+The Citizen App should feel extremely simple even though GovMesh
+behind it is technically complex.
+
+Citizen sees:
+
+"Tell us what you need."
+        ->
+"Here are the services involved."
+        ->
+"Here is what data will be shared and why."
+        ->
+"Approve."
+        ->
+"GovMesh coordinates the departments."
+        ->
+"Track everything in one place."
+
+Behind the scenes:
+Identity
+Consent
+Canonical Data
+Schema Mapping
+Validation
+Workflow Orchestration
+Event Bus
+REST Adapter
+SOAP Adapter
+Legacy Adapter
+Retry/Recovery
+Audit
+Monitoring
+
+FINAL UX MESSAGE:
+
+"ONE CITIZEN REQUEST.
+MULTIPLE GOVERNMENT SYSTEMS.
+ONE COORDINATED WORKFLOW."

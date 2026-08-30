@@ -1,0 +1,72 @@
+GOVMESH — SIH26129
+TECH STACK
+
+1. FRONTEND
+- Citizen App: Flutter
+- Officer / Department Dashboard: React.js + TypeScript
+
+2. API & BACKEND
+- Backend Framework: Python FastAPI
+- API Gateway: Kong / NGINX
+- API Specification: OpenAPI / Swagger
+
+3. WORKFLOW & EVENT PROCESSING
+- Workflow Orchestration: Temporal
+- Message Queue / Event Bus: RabbitMQ
+- Caching: Redis
+
+4. INTEROPERABILITY
+- Modern Integration: REST API + JSON
+- Enterprise/Legacy Integration: SOAP + XML
+- Legacy Integration: CSV / File / SFTP Adapter
+- Data Standardization: JSON Schema + Pydantic
+- Schema Mapping: Python-based Mapping Engine
+
+5. DATABASE
+- Primary Database: PostgreSQL
+
+6. IDENTITY & SECURITY
+- Identity & Access Management: Keycloak
+- Authentication: OAuth 2.0 + OpenID Connect (OIDC)
+- Token: JWT
+- Authorization: RBAC / ABAC
+- Consent Management: Purpose + Scope based consent
+- Audit: Append-only audit records
+
+7. AI / DOCUMENT INTELLIGENCE
+- AI Development: Python
+- OCR: PaddleOCR / Tesseract
+- LLM: LLM API or Local LLM
+- AI Use Cases:
+  - Citizen intent classification
+  - Document information extraction
+  - Schema-mapping assistance
+  - Data inconsistency detection
+
+8. MONITORING & LOGGING
+- Metrics: Prometheus
+- Dashboards: Grafana
+- Centralized Logging: Loki / ELK
+
+9. DEVOPS & DEPLOYMENT
+- Containerization: Docker
+- Local / MVP Deployment: Docker Compose
+- Production Scalability: Kubernetes
+
+10. DEVELOPMENT & COLLABORATION
+- Version Control: Git
+- Repository: GitHub
+- API Testing: Postman
+
+RECOMMENDED MVP STACK
+- Flutter
+- React.js + TypeScript
+- Python FastAPI
+- PostgreSQL
+- RabbitMQ
+- Keycloak
+- Docker
+- REST/JSON
+- SOAP/XML
+- CSV/File Adapter
+- OCR + LLM

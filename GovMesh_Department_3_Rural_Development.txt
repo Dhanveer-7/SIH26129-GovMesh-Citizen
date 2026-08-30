@@ -1,0 +1,538 @@
+GOVMESH – SIH26129
+DEPARTMENT 3 – RURAL DEVELOPMENT & PANCHAYAT RAJ
+SIMULATED DEPARTMENT SYSTEM – MVP REQUIREMENTS
+============================================================
+
+PURPOSE
+-------
+Department 3 represents the Rural Development & Panchayat Raj
+Department.
+
+Its role is to demonstrate integration with a LEGACY-STYLE system.
+
+Recommended simulated integration:
+CSV/File + SFTP
+
+This gives the MVP three different integration patterns:
+
+Department 1:
+REST + JSON
+
+Department 2:
+SOAP + XML
+
+Department 3:
+Legacy CSV/File + SFTP
+
+
+============================================================
+1. DEPARTMENT LOGIN
+============================================================
+
+MUST HAVE:
+- Officer login
+- Password/OTP simulation
+- Role-based access
+- Session timeout
+- Logout
+
+Roles:
+- Rural Development Officer
+- Panchayat Officer
+- Senior Officer
+- Department Admin
+- Auditor
+
+
+============================================================
+2. DEPARTMENT DASHBOARD
+============================================================
+
+Show:
+
+- Files received
+- Requests imported
+- Pending applications
+- Processing
+- Completed
+- Rejected
+- Invalid records
+- Failed imports
+- Export queue
+- System status
+
+Example:
+
+RURAL DEVELOPMENT
+
+Files Received Today       8
+Records Imported          124
+Pending                    11
+Completed                  96
+Invalid Records             4
+Failed Files                1
+
+LEGACY CONNECTOR:
+ONLINE
+
+
+============================================================
+3. PRIMARY MVP USE CASE
+============================================================
+
+LOCAL ADDRESS / RURAL SERVICE RECORD UPDATE
+
+GovMesh sends the approved standardized information to Department 3.
+
+Instead of a modern API, the simulated legacy system receives
+a structured CSV file.
+
+Example:
+
+application_id,citizen_name,address,district,verified
+GM-2026-000124,XXXXX,XXXXX,Chennai,true
+
+
+============================================================
+4. LEGACY ADAPTER
+============================================================
+
+GovMesh should have:
+
+Canonical Model
+     |
+CSV Transformation
+     |
+CSV File
+     |
+SFTP / File Transfer
+     |
+Department 3
+     |
+Parser
+     |
+Validation
+     |
+Processing
+
+
+============================================================
+5. FILE INGESTION
+============================================================
+
+Department system should:
+
+1. Detect incoming file
+2. Verify file name
+3. Validate file structure
+4. Validate headers
+5. Parse records
+6. Validate required fields
+7. Detect duplicates
+8. Process valid records
+9. Reject invalid records
+10. Generate result file
+
+Example:
+
+INBOUND:
+GM_2026_000124.csv
+
+OUTBOUND:
+GM_2026_000124_RESULT.csv
+
+
+============================================================
+6. FILE VALIDATION
+============================================================
+
+Validate:
+- Required columns
+- Column order
+- Data types
+- Date formats
+- Address fields
+- Application ID
+- Duplicate records
+- Empty values
+
+Invalid records should be placed into an exception queue.
+
+
+============================================================
+7. BATCH PROCESSING
+============================================================
+
+Department 3 should support batch processing.
+
+Example:
+
+100 records received
+
+Valid:
+96
+
+Invalid:
+4
+
+Processed:
+96
+
+Rejected:
+4
+
+GovMesh receives the processing summary.
+
+
+============================================================
+8. CONSENT VALIDATION
+============================================================
+
+Consent metadata should accompany the transfer.
+
+For the MVP, this can be represented through:
+- Signed metadata
+- Consent reference
+- Manifest file
+- Secure transfer metadata
+
+Department verifies:
+- Application ID
+- Consent ID
+- Purpose
+- Allowed data fields
+- Validity
+
+
+============================================================
+9. MANIFEST / METADATA
+============================================================
+
+A file transfer should include metadata.
+
+Example:
+
+File:
+GM_2026_000124.csv
+
+Application:
+GM-2026-000124
+
+Consent:
+CONSENT-00124
+
+Purpose:
+Rural service record update
+
+Created:
+2026-08-30T10:15:00
+
+Checksum:
+<generated checksum>
+
+This demonstrates integrity checking.
+
+
+============================================================
+10. FILE INTEGRITY
+============================================================
+
+Use checksum/hash to detect corruption.
+
+Example:
+
+Sender:
+SHA-256 = ABC123...
+
+Receiver:
+SHA-256 = ABC123...
+
+Result:
+FILE INTEGRITY VERIFIED
+
+
+============================================================
+11. DUPLICATE FILE DETECTION
+============================================================
+
+Detect:
+- Same file uploaded twice
+- Same application repeated
+- Same checksum
+- Same application ID
+
+If duplicate:
+Do not process twice.
+
+Return:
+DUPLICATE_FILE
+
+
+============================================================
+12. INVALID RECORD HANDLING
+============================================================
+
+Example:
+
+Record:
+GM-2026-000125
+
+Error:
+Missing district
+
+Status:
+INVALID
+
+Department officer can:
+- View error
+- Correct if permitted
+- Request information
+- Reprocess
+
+
+============================================================
+13. EXCEPTION QUEUE
+============================================================
+
+Show:
+
+EXCEPTION QUEUE
+
+1. GM-2026-000125
+   Missing district
+
+2. GM-2026-000128
+   Invalid application ID
+
+3. GM-2026-000132
+   Duplicate record
+
+
+============================================================
+14. BATCH RESULT
+============================================================
+
+After processing:
+
+------------------------------------------------------------
+FILE: GM_BATCH_001.csv
+
+TOTAL: 100
+SUCCESS: 96
+FAILED: 4
+
+SUCCESSFUL APPLICATIONS:
+GM-2026-000124
+GM-2026-000126
+...
+
+FAILED:
+GM-2026-000125 – Missing district
+...
+------------------------------------------------------------
+
+GovMesh maps this result into individual workflow updates.
+
+
+============================================================
+15. OFFICER REVIEW
+============================================================
+
+Officer should see:
+
+File details
+Record details
+Citizen reference
+Application ID
+Existing record
+Incoming record
+Consent
+Validation status
+Processing status
+
+Actions:
+[Approve]
+[Reject]
+[Correct]
+[Request Information]
+[Reprocess]
+
+
+============================================================
+16. FAILURE & RECOVERY
+============================================================
+
+Simulate:
+
+- SFTP unavailable
+- File corrupted
+- Invalid schema
+- Missing columns
+- Processing failure
+- Network interruption
+
+GovMesh:
+Queue
+Retry
+Track
+Notify
+
+Example:
+
+TRANSFER FAILED
+
+Reason:
+Legacy service unavailable
+
+Status:
+QUEUED FOR RETRY
+
+No citizen action required.
+
+
+============================================================
+17. AUDIT LOG
+============================================================
+
+Capture:
+
+- File created
+- File transferred
+- File received
+- Checksum verified
+- File parsed
+- Records processed
+- Exceptions created
+- Officer action
+- Result returned
+
+Fields:
+Timestamp
+Application ID
+File ID
+Checksum
+Action
+Result
+Officer ID
+
+
+============================================================
+18. SYSTEM MONITORING
+============================================================
+
+Show:
+- SFTP status
+- Last file received
+- Last successful import
+- Failed transfers
+- Pending files
+- Processing duration
+- Invalid records
+
+Example:
+
+SFTP:
+ONLINE
+
+LAST IMPORT:
+10:15 AM
+
+PENDING FILES:
+2
+
+
+============================================================
+19. RECOMMENDED TECH STACK
+============================================================
+
+Frontend:
+React.js + TypeScript
+
+Backend:
+Node.js + Express
+OR Python FastAPI
+
+Legacy Integration:
+CSV + SFTP
+
+Database:
+PostgreSQL / SQLite for MVP
+
+Authentication:
+Keycloak / JWT
+
+File Integrity:
+SHA-256
+
+Container:
+Docker
+
+
+============================================================
+20. DEPARTMENT 3 MVP SCREENS
+============================================================
+
+01. Login
+02. Dashboard
+03. Incoming Files
+04. File Details
+05. Record Details
+06. Validation Results
+07. Exception Queue
+08. Officer Review
+09. Batch Processing Results
+10. Failed Transfers
+11. Audit Logs
+12. System Health
+13. Profile
+
+
+============================================================
+21. DEMO ROLE
+============================================================
+
+Department 3 is the LEGACY interoperability demonstration.
+
+GovMesh
+   |
+Canonical Data
+   |
+CSV Adapter
+   |
+SFTP/File Transfer
+   |
+Rural Development System
+   |
+CSV Parser
+   |
+Validation
+   |
+Batch Processing
+   |
+Result File
+   |
+GovMesh
+   |
+Citizen Timeline
+
+
+============================================================
+22. SUCCESS CRITERIA
+============================================================
+
+The evaluator should see:
+
+1. Department 3 uses a legacy-style interface.
+2. No modern REST API is required by the simulated department.
+3. GovMesh transforms canonical data into CSV.
+4. Secure file transfer occurs.
+5. File integrity is checked.
+6. Records are validated.
+7. Invalid records enter an exception queue.
+8. Valid records are processed.
+9. Result is returned to GovMesh.
+10. Citizen sees a unified workflow status.
+
+FINAL MESSAGE:
+"GovMesh can integrate modern APIs, enterprise services and
+legacy file-based systems through reusable adapters."
