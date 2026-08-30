@@ -150,9 +150,8 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUploadedDoc(newDoc);
     setDocuments(prev => [newDoc, ...prev]);
 
-    // Simulate OCR analysis
-    setCurrentStep('OCR_PROCESSING');
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // Simulate file upload validation latency (remains on upload step)
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     const finalDoc: DocumentRecord = {
       ...newDoc,
