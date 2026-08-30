@@ -16,6 +16,15 @@ export const ServiceWorkflow: React.FC = () => {
   } = useDemo();
   const navigate = useNavigate();
 
+  const getIdentifiedService = () => {
+    if (!nlQuery) return "Address Change";
+    const q = nlQuery.toLowerCase();
+    if (q.includes('name')) return "Name Update";
+    if (q.includes('ration') || q.includes('food') || q.includes('pds')) return "Ration Card Update";
+    if (q.includes('land') || q.includes('revenue')) return "Land Record Synchronization";
+    return "Address Change";
+  };
+
   // Workflow steps for the ProgressBar
   const steps = [
     "Intents Suggestion",
@@ -139,7 +148,7 @@ export const ServiceWorkflow: React.FC = () => {
                   GovMesh AI Assistant Suggestion
                 </span>
                 <h2 className="text-lg font-extrabold text-slate-800 leading-tight">
-                  Request Identified: <span className="text-indigo-600">Address Change</span>
+                  Request Identified: <span className="text-indigo-600">{getIdentifiedService()}</span>
                 </h2>
               </div>
             </div>
@@ -147,6 +156,15 @@ export const ServiceWorkflow: React.FC = () => {
             <p className="text-xs text-slate-550 leading-relaxed font-semibold">
               Based on your search prompt: <span className="italic font-bold text-slate-800 bg-slate-50 px-2 py-1 rounded">"{nlQuery}"</span>, GovMesh has identified that this action impacts three connected government registries:
             </p>
+
+            {getIdentifiedService() !== "Address Change" && (
+              <div className="p-3 bg-amber-50 border border-amber-150 rounded-xl text-[10px] text-amber-800 font-semibold leading-relaxed flex items-start gap-2.5 shadow-gov-sm">
+                <span className="text-xs">⚠️</span>
+                <span>
+                  In the GovMesh Demo Sandbox, all registry update queries are mapped to the primary <strong>Address Update</strong> coordination workflow to demonstrate end-to-end integration logic.
+                </span>
+              </div>
+            )}
 
             {/* Suggested Departments */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
