@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Application, ConsentRecord, Notification, DataSharingLog, DocumentRecord, ApplicationStatus } from '../types';
 import { mockApplications, mockConsents, mockNotifications, mockDataSharingLogs } from '../mock/data';
+import { ruralDepartmentApi } from '../services/ruralDepartmentApi';
 
 export type ServiceWorkflowStep =
   | 'INPUT'
@@ -42,6 +43,10 @@ interface DemoContextType {
   // Active Tracking Demo State
   activeAppId: string | null;
   trackingState: TrackingDemoState;
+  
+  // Real API Transaction mode
+  isRealTransaction: boolean;
+  setIsRealTransaction: (val: boolean) => void;
   
   // State methods
   setWorkflowStep: (step: ServiceWorkflowStep) => void;
@@ -98,6 +103,8 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [trackingState, setTrackingState] = useState<TrackingDemoState>(() => {
     return (localStorage.getItem('govmesh_tracking_state') as TrackingDemoState) || 'SUBMITTED';
   });
+
+  const [isRealTransaction, setIsRealTransaction] = useState(false);
 
   // Save list state to local storage
   useEffect(() => {
@@ -200,7 +207,7 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Submit address change request
-  const submitServiceRequest = (consentsApproved: { revenue: boolean; food: boolean; rural: boolean }) => {
+  const submitServiceRequest = async (consentsApproved: { revenue: boolean; food: boolean; rural: boolean }) => {
     const appId = "GM-2026-000124";
     const corrId = "CORR-26-0124";
     const timeNow = new Date().toISOString();
@@ -273,21 +280,88 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     }
 
-    setApplications(prev => [newApp, ...prev]);
-    setConsents(prev => [...newConsents, ...prev]);
-    setSharingLogs(prev => [...newSharingLogs, ...prev]);
+    if (isRealTransaction) {
+      console.log("[Integration API] Real Transaction mode active. Invoking Rural Department API...");
+      
+      // Update app state for real E2E attempt
+      newApp.status = "SUBMITTED";
+      newApp.progressPercent = 33;
+      newApp.steps[0] = { departmentName: "Revenue Department", action: "Verify/update address record", status: "SUCCESS", remarks: "Verified via Mock GovMesh Core" };
+      newApp.steps[1] = { departmentName: "Food & Civil Supplies Department", action: "Update eligible ration/PDS record", status: "SUCCESS", remarks: "Verified via Mock GovMesh Core" };
+      newApp.steps[2] = { departmentName: "Rural Development Department", action: "Update relevant local service record", status: "PROCESSING", remarks: "Sending transaction to Rural API..." };
 
-    setActiveAppId(appId);
-    setTrackingState('SUBMITTED');
-    setCurrentStep('SUCCESS_SPLASH');
+      setApplications(prev => [newApp, ...prev]);
+      setConsents(prev => [...newConsents, ...prev]);
+      setSharingLogs(prev => [...newSharingLogs, ...prev]);
+      
+      setActiveAppId(appId);
+      setTrackingState('FOOD_SUCCESS');
+      setCurrentStep('SUCCESS_SPLASH');
 
-    addNotification({
-      title: "Address Update Request Submitted",
-      description: `Request GM-2026-000124 has been created. GovMesh is coordinating with 3 departments.`,
-      type: "SUCCESS",
-      applicationId: appId,
-      priority: "HIGH"
-    });
+      try {
+        await ruralDepartmentApi.submitAddressChange({
+          applicationId: appId,
+          citizenId: "GM-CIT-10001",
+          serviceCode: "ADDRESS_CHANGE",
+          purpose: "Update rural development citizen record",
+          consentId: "CONSENT-00124-RURAL",
+          citizen: {
+            name: ocrFields?.name || "Demo Citizen",
+            address: {
+              line1: ocrFields?.address || "Demo Address",
+              district: "Pune",
+              state: "Maharashtra"
+            }
+          }
+        });
+      } catch (err: any) {
+        console.error(`[Integration Service Error] ${err.message}`);
+        
+        // Update application state to FAILED
+        setApplications(prev => prev.map(a => {
+          if (a.id !== appId) return a;
+          const updatedSteps = [...a.steps];
+          updatedSteps[2] = {
+            ...updatedSteps[2],
+            status: "FAILED",
+            remarks: "GovMesh integration endpoint is not currently available."
+          };
+          return {
+            ...a,
+            status: "FAILED",
+            progressPercent: 66,
+            steps: updatedSteps
+          };
+        }));
+        
+        setTrackingState('RURAL_FAILURE');
+
+        addNotification({
+          title: "Rural Development Update Failed",
+          description: "Rural Development service is temporarily unavailable. Your request has not been marked as completed.",
+          type: "ALERT",
+          applicationId: appId,
+          priority: "HIGH"
+        });
+      }
+    } else {
+      // Mock sandbox mode (Simulate timeline automatically)
+      setApplications(prev => [newApp, ...prev]);
+      setConsents(prev => [...newConsents, ...prev]);
+      setSharingLogs(prev => [...newSharingLogs, ...prev]);
+
+      setActiveAppId(appId);
+      setTrackingState('SUBMITTED');
+      setCurrentStep('SUCCESS_SPLASH');
+
+      addNotification({
+        title: "Address Update Request Submitted",
+        description: `Request GM-2026-000124 has been created. GovMesh is coordinating with 3 departments.`,
+        type: "SUCCESS",
+        applicationId: appId,
+        priority: "HIGH"
+      });
+    }
   };
 
   // State transitions triggered by controller or timeout
@@ -511,6 +585,8 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ocrConfidence,
       activeAppId,
       trackingState,
+      isRealTransaction,
+      setIsRealTransaction,
       setWorkflowStep,
       setNlQuery,
       setDetectedIntent,

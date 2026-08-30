@@ -11,7 +11,8 @@ import { Modal } from '../components/Modal';
 export const ServiceWorkflow: React.FC = () => {
   const {
     currentStep, setWorkflowStep, nlQuery, submitServiceRequest,
-    uploadDocument, ocrFields, updateOcrField, ocrConfidence, uploadedDoc
+    uploadDocument, ocrFields, updateOcrField, ocrConfidence, uploadedDoc,
+    isRealTransaction, setIsRealTransaction
   } = useDemo();
   const navigate = useNavigate();
 
@@ -691,6 +692,44 @@ export const ServiceWorkflow: React.FC = () => {
               <div>
                 <span className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Uploaded Proof</span>
                 <span className="font-bold text-slate-800">{uploadedDoc?.name}</span>
+              </div>
+            </div>
+
+            {/* Section: Integration Transaction Mode Selector */}
+            <div className="border-t border-slate-100 pt-5">
+              <span className="block text-[10px] font-bold text-slate-450 uppercase mb-2">Transaction Mode</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsRealTransaction(false)}
+                  className={`flex flex-col items-start p-3 rounded-xl border text-left transition ${
+                    !isRealTransaction 
+                      ? 'border-indigo-600 bg-indigo-50/20' 
+                      : 'border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  <span className="font-bold text-xs text-slate-800">Sandbox Mock Mode</span>
+                  <span className="text-[10px] text-slate-500 mt-1 leading-normal">
+                    Simulate success timelines, state crash triggers, and sync processes entirely inside the frontend mock engine.
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsRealTransaction(true)}
+                  className={`flex flex-col items-start p-3 rounded-xl border text-left transition ${
+                    isRealTransaction 
+                      ? 'border-indigo-600 bg-indigo-50/20' 
+                      : 'border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  <span className="font-bold text-xs text-slate-800 flex items-center gap-1.5">
+                    Real API Transaction Mode
+                    <span className="bg-amber-100 text-amber-800 text-[8px] font-bold px-1.5 py-0.5 rounded shadow-gov-sm uppercase">Active API</span>
+                  </span>
+                  <span className="text-[10px] text-slate-500 mt-1 leading-normal">
+                    Attempt a real HTTP request directly to the deployed Rural Development API endpoint configured in the environment.
+                  </span>
+                </button>
               </div>
             </div>
 
