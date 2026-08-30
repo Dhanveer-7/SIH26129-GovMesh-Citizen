@@ -18,8 +18,8 @@ export const Dashboard: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isRecording, setIsRecording] = useState(false);
 
-  // Active address update application GM-2026-000124
-  const activeApp = applications.find(app => app.id === "GM-2026-000124" || app.status !== "COMPLETED");
+  // Active address update application
+  const activeApp = applications.find(app => app.id === activeAppId || app.status !== "COMPLETED") || applications[0];
 
   const handleNlSearch = (e: React.FormEvent) => {
     e.preventDefault();

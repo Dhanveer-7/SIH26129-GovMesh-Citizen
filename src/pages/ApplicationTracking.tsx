@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDemo } from '../context/DemoContext';
 import { Timeline } from '../components/Timeline';
 import { 
@@ -9,12 +9,19 @@ import { Modal } from '../components/Modal';
 
 export const ApplicationTracking: React.FC = () => {
   const { 
-    applications, trackingState, triggerDemoState, uploadDocument, documents
+    applications, trackingState, triggerDemoState, uploadDocument, documents, activeAppId
   } = useDemo();
 
-  const [searchId, setSearchId] = useState('GM-2026-000124');
-  const [selectedAppId, setSelectedAppId] = useState('GM-2026-000124');
+  const [searchId, setSearchId] = useState(activeAppId || 'GM-2026-000124');
+  const [selectedAppId, setSelectedAppId] = useState(activeAppId || 'GM-2026-000124');
   
+  useEffect(() => {
+    if (activeAppId) {
+      setSelectedAppId(activeAppId);
+      setSearchId(activeAppId);
+    }
+  }, [activeAppId]);
+
   const [correctedFile, setCorrectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);

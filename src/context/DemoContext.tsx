@@ -208,8 +208,8 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Submit address change request
   const submitServiceRequest = async (consentsApproved: { revenue: boolean; food: boolean; rural: boolean }) => {
-    const appId = "GM-2026-000124";
-    const corrId = "CORR-26-0124";
+    const appId = `GM-2026-${Math.floor(100000 + Math.random() * 900000)}`;
+    const corrId = `CORR-26-${Math.floor(1000 + Math.random() * 9000)}`;
     const timeNow = new Date().toISOString();
     
     // 1. Create Application
@@ -235,7 +235,7 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // 2. Create Consents
     const newConsents: ConsentRecord[] = [
       {
-        id: "CONSENT-00124-REV",
+        id: `CONSENT-${Math.floor(10000 + Math.random() * 90000)}-REV`,
         department: "Revenue Department",
         scope: ["Name", "New Address", "Address Proof Verification Result"],
         purpose: "Address registry update verification",
@@ -245,7 +245,7 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
       },
       {
-        id: "CONSENT-00124-FOOD",
+        id: `CONSENT-${Math.floor(10000 + Math.random() * 90000)}-FOOD`,
         department: "Food & Civil Supplies Department",
         scope: ["Name", "New Address", "Supporting Verification Result"],
         purpose: "Ration/PDS registry address update",
@@ -255,7 +255,7 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
       },
       {
-        id: "CONSENT-00124-RURAL",
+        id: `CONSENT-${Math.floor(10000 + Math.random() * 90000)}-RURAL`,
         department: "Rural Development Department",
         scope: ["Name", "New Address", "Local Registry Details"],
         purpose: "Local panchayat address database synchronization",
@@ -270,13 +270,13 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const newSharingLogs: DataSharingLog[] = [];
     if (consentsApproved.revenue) {
       newSharingLogs.push({
-        id: "DSL-12401",
+        id: `DSL-${Math.floor(10000 + Math.random() * 90000)}`,
         sharedWith: "Revenue Department",
         dataScope: ["Name", "New Address", "Address Proof Verification Result"],
         purpose: "Address registry verification",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         applicationId: appId,
-        consentId: "CONSENT-00124-REV"
+        consentId: `CONSENT-${Math.floor(10000 + Math.random() * 90000)}-REV`
       });
     }
 
@@ -304,7 +304,7 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           citizenId: "GM-CIT-10001",
           serviceCode: "ADDRESS_CHANGE",
           purpose: "Update rural development citizen record",
-          consentId: "CONSENT-00124-RURAL",
+          consentId: `CONSENT-${Math.floor(10000 + Math.random() * 90000)}-RURAL`,
           citizen: {
             name: ocrFields?.name || "Demo Citizen",
             address: {
@@ -356,7 +356,7 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       addNotification({
         title: "Address Update Request Submitted",
-        description: `Request GM-2026-000124 has been created. GovMesh is coordinating with 3 departments.`,
+        description: `Request ${appId} has been created. GovMesh is coordinating with 3 departments.`,
         type: "SUCCESS",
         applicationId: appId,
         priority: "HIGH"
@@ -368,9 +368,11 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const triggerDemoState = (state: TrackingDemoState) => {
     setTrackingState(state);
     
+    const targetAppId = activeAppId || "GM-2026-000124";
+    
     setApplications(prev => {
       return prev.map(app => {
-        if (app.id !== "GM-2026-000124") return app;
+        if (app.id !== targetAppId) return app;
         
         let status: ApplicationStatus = app.status;
         let progressPercent = app.progressPercent;
@@ -461,7 +463,7 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Automatically trigger relevant notifications & data sharing logs based on states
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const appId = "GM-2026-000124";
+    const appId = targetAppId;
 
     if (state === 'REVENUE_SUCCESS') {
       addNotification({
