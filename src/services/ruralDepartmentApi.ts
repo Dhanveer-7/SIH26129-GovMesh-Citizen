@@ -33,28 +33,48 @@ export const ruralDepartmentApi = {
 
   /**
    * Submits a canonical address change request to the Rural Development department.
-   * Maps client format to the department contract schemas.
+   * Connects directly to the configured endpoint and maps response status.
    */
   submitAddressChange: async (request: CanonicalAddressChangeRequest): Promise<IntegrationResponse> => {
-    // 1. Check if the VITE_RURAL_API_BASE_URL is configured
     if (!RURAL_API_BASE_URL) {
       throw new Error("Integration Error: VITE_RURAL_API_BASE_URL environment variable is not defined.");
     }
 
-    console.log(`[Integration Service] Submitting transaction ${request.applicationId} to remote host: ${RURAL_API_BASE_URL}`);
+    const url = `${RURAL_API_BASE_URL}/api/rural/address-update`;
+    console.log(`[Integration Service] POST Request initiated to: ${url}`);
 
-    /**
-     * Inspecting the remote Rural Development API spec:
-     * Currently, the remote system only exposes file uploads/toggles and auth. 
-     * It does NOT expose any endpoint matching POST /api/rural/address-update or POST /api/govmesh/requests.
-     * 
-     * As per the architectural guidelines, if the required endpoint is missing,
-     * we must immediately report its unavailability.
-     */
-    const expectedEndpoint = '/api/rural/address-update';
-    
-    // Explicitly throw integration error to prevent silent mock bypasses
-    throw new Error("GovMesh integration endpoint is not currently available.");
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(request)
+      });
+    } catch (err: any) {
+      throw new Error(`Network Failure: Unable to establish connection to Rural server. details: ${err.message}`);
+    }
+
+    // Capture raw response body for parsing analysis
+    const rawBody = await response.text();
+    console.log(`[Integration Service Response] HTTP ${response.status} Raw Body:`, rawBody);
+
+    // Guard: Verify HTTP response is successful (2xx)
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error("GovMesh integration endpoint is not currently available.");
+      }
+      throw new Error(`API Error ${response.status}: Rural Development service is temporarily unavailable. Request not completed.`);
+    }
+
+    // Guard: Parse JSON response securely
+    try {
+      const data = JSON.parse(rawBody) as IntegrationResponse;
+      return data;
+    } catch {
+      throw new Error(`Parsing Failure: Server returned an invalid payload format (Expected JSON, received: ${response.headers.get('content-type') || 'text'}).`);
+    }
   },
 
   /**
@@ -65,11 +85,32 @@ export const ruralDepartmentApi = {
       throw new Error("Integration Error: VITE_RURAL_API_BASE_URL environment variable is not defined.");
     }
 
-    /**
-     * The Rural system does not currently provide a GET /api/govmesh/requests/{applicationId} 
-     * or GET /api/rural/application/{id} status polling endpoint.
-     */
-    throw new Error("Status endpoint 'GET /api/rural/application/{id}' must be added to the Rural Development application.");
+    const url = `${RURAL_API_BASE_URL}/api/rural/application/${departmentApplicationId}`;
+    console.log(`[Integration Service] Polling application status from: ${url}`);
+
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: 'GET'
+      });
+    } catch (err: any) {
+      throw new Error(`Network Failure: Status lookup failed. details: ${err.message}`);
+    }
+
+    const rawBody = await response.text();
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error("Status endpoint 'GET /api/rural/application/{id}' must be added to the Rural Development application.");
+      }
+      throw new Error(`API Status Lookup Error ${response.status}`);
+    }
+
+    try {
+      return JSON.parse(rawBody);
+    } catch {
+      throw new Error("Parsing Failure: Status response was not valid JSON.");
+    }
   }
 };
 
