@@ -111,4 +111,17 @@ The GovMesh platform coordinates separate systems using this conceptual model:
    System   System System
 ```
 
-**Advisory Disclaimer:** This repository represents the Citizen Portal user interface only. Authentic government databases or official state portals are simulated.
+**Advisory Disclaimer:** This repository represents the Citizen Portal user interface and simulated department sandbox API schemas. Authentic government databases or official state portals are simulated.
+
+---
+
+## Rural Development Department Integration API
+
+A standalone simulated API backend for the Rural Development & Panchayat Raj Department resides in the [`/rural-department-backend`](file:///rural-department-backend) subfolder. This system serves as a legacy database simulator for GovMesh to demonstrate cross-registry updates.
+
+### Endpoints Map
+- `POST /api/rural/address-update`: Submit address update payload. Creates a Panchayat application entry in `RECEIVED` status. Over a 40-second window, the status automatically cycles from `RECEIVED` ➔ `PROCESSING` ➔ `COMPLETED`.
+- `GET /api/rural/application/{id}`: Fetch current status of a specific Panchayat application.
+- `POST /api/rural/demo/toggle-failure`: Simulate a backend system failure (returns HTTP 503 Service Unavailable) to demonstrate GovMesh's queue-retry loops and automatic recovery.
+
+For setup steps and code details, refer to the [Rural Backend README](file:///rural-department-backend/README.md).
