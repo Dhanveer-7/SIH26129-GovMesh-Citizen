@@ -52,7 +52,7 @@ export const foodAdapter = {
       };
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 12000);
+      const timeoutId = setTimeout(() => controller.abort(), 25000);
 
       const response = await fetch(`${baseUrl}/api/govmesh/interoperability/address-update`, {
         method: 'POST',

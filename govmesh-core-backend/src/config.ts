@@ -10,6 +10,6 @@ export const config = {
     .filter(Boolean),
   revenueApiBaseUrl: process.env.DEPARTMENT_1_API_BASE_URL || process.env.REVENUE_API_BASE_URL || 'https://sih-2026-revenue-dept.onrender.com',
   foodApiBaseUrl: process.env.DEPARTMENT_2_API_BASE_URL || process.env.FOOD_API_BASE_URL || 'https://sih-awaq.onrender.com',
-  ruralApiBaseUrl: process.env.DEPARTMENT_3_API_BASE_URL || process.env.RURAL_API_BASE_URL || 'http://localhost:5003',
+  ruralApiBaseUrl: process.env.DEPARTMENT_3_API_BASE_URL || process.env.RURAL_API_BASE_URL || 'https://sih-26129-gov-mesh-rural-develpment.vercel.app',
   govmeshApiKey: process.env.GOVMESH_API_KEY || 'gm-secret-key-2026-interop'
 };

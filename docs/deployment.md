@@ -13,7 +13,7 @@
 | **Revenue Backend** | Render (FastAPI) | `https://sih-2026-revenue-dept.onrender.com` |
 | **Food Department Backend** | Render (Spring Boot) | `https://sih-awaq.onrender.com` |
 | **Food Department Frontend** | Vercel | `https://sih-flax-rho.vercel.app/` |
-| **Rural Development** | Node.js / Express | `http://localhost:5003` / `https://sih-26129-gov-mesh-rural-develpment.vercel.app/` |
+| **Rural Development Backend** | Vercel (Express Serverless) | `https://sih-26129-gov-mesh-rural-develpment.vercel.app/` |
 
 ---
 
@@ -37,8 +37,8 @@ REVENUE_API_BASE_URL=https://sih-2026-revenue-dept.onrender.com
 DEPARTMENT_2_API_BASE_URL=https://sih-awaq.onrender.com
 FOOD_API_BASE_URL=https://sih-awaq.onrender.com
 
-DEPARTMENT_3_API_BASE_URL=http://localhost:5003
-RURAL_API_BASE_URL=http://localhost:5003
+DEPARTMENT_3_API_BASE_URL=https://sih-26129-gov-mesh-rural-develpment.vercel.app
+RURAL_API_BASE_URL=https://sih-26129-gov-mesh-rural-develpment.vercel.app
 
 GOVMESH_API_KEY=gm-secret-key-2026-interop
 ```
