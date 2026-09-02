@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: govmesh-core-backend
+    runtime: node
+    rootDir: govmesh-core-backend
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: FRONTEND_ORIGIN
+        value: https://sih-26129-gov-mesh-citizen.vercel.app,http://localhost:5173,http://localhost:3000
+      - key: DEPARTMENT_1_API_BASE_URL
+        value: https://sih-2026-revenue-dept.onrender.com
+      - key: REVENUE_API_BASE_URL
+        value: https://sih-2026-revenue-dept.onrender.com
+      - key: DEPARTMENT_2_API_BASE_URL
+        value: https://sih-awaq.onrender.com
+      - key: FOOD_API_BASE_URL
+        value: https://sih-awaq.onrender.com
+      - key: DEPARTMENT_3_API_BASE_URL
+        value: https://sih-26129-gov-mesh-rural-develpment.vercel.app
+      - key: RURAL_API_BASE_URL
+        value: https://sih-26129-gov-mesh-rural-develpment.vercel.app
+      - key: GOVMESH_API_KEY
+        value: gm-secret-key-2026-interop

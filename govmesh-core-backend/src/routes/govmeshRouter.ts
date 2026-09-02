@@ -9,7 +9,7 @@ const router = express.Router();
 // ============================================================
 // 1. HEALTH & SYSTEM MONITORING
 // ============================================================
-router.get(['/health', '/api/health'], (req, res) => {
+router.get(['/', '/health', '/api/health'], (req, res) => {
   res.json({
     status: 'ok',
     service: 'govmesh-core-backend',
