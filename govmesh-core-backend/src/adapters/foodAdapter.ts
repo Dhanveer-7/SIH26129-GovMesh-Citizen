@@ -42,8 +42,9 @@ export const foodAdapter = {
           }
         },
         verification: {
-          status: 'VERIFIED',
-          source: 'REVENUE_DEPARTMENT'
+          status: 'VALID',
+          source: 'REVENUE_DEPARTMENT',
+          verified: true
         },
         consent: {
           id: request.consentId || 'CONSENT-00124'

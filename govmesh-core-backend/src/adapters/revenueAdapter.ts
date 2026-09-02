@@ -24,7 +24,7 @@ async function getRevenueAuthToken(baseUrl: string): Promise<string> {
     if (res.ok) {
       const data: any = await res.json();
       if (data?.access_token) {
-        cachedToken = data.access_token;
+        cachedToken = String(data.access_token);
         tokenExpiresAt = now + ((data.expires_in || 1800) * 1000);
         return cachedToken;
       }
