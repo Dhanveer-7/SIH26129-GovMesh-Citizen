@@ -144,6 +144,31 @@ export const api = {
       return [];
     }
     return apiRequest<DataSharingLog[]>('/transparency/logs');
+  },
+
+  // GovMesh Interoperability Core Transaction Ingress
+  submitGovMeshTransaction: async (payload: {
+    applicationId?: string;
+    citizenId?: string;
+    serviceCode?: string;
+    purpose?: string;
+    consentId?: string;
+    consents?: { revenue: boolean; food: boolean; rural: boolean };
+    citizen?: { name?: string; address?: { line1?: string; district?: string; state?: string } };
+  }) => {
+    const coreUrl = import.meta.env.VITE_GOVMESH_CORE_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+    const res = await fetch(`${coreUrl}/api/govmesh/transactions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    return res.json();
+  },
+
+  getGovMeshTransactionStatus: async (applicationId: string) => {
+    const coreUrl = import.meta.env.VITE_GOVMESH_CORE_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+    const res = await fetch(`${coreUrl}/api/govmesh/transactions/${applicationId}`);
+    return res.json();
   }
 };
 export default api;

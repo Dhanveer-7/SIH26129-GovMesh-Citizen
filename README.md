@@ -1,4 +1,6 @@
-# GovMesh Citizen Portal — SIH26129
+# GovMesh Citizen Portal & Interoperability Orchestrator — SIH26129
+
+> **Disclaimer**: *This is a demonstration interoperability platform developed for SIH26129 and is not an official Government of Maharashtra production system.*
 
 GovMesh is an interoperability and digital service orchestration platform designed for the Smart India Hackathon 2026.
 
@@ -8,9 +10,19 @@ GovMesh is an interoperability and digital service orchestration platform design
 
 Currently, citizens applying for multi-system changes (e.g. updating an address or family credentials) must log in to several department portals separately (Revenue, Food/PDS distribution, and Rural Development Panchayats). This results in a fragmented, repetitive service delivery model with redundant file uploads, data synchronization lag, and high administrative overhead.
 
-## Description
+## System Architecture
 
-This repository contains the **Citizen Portal** component of the GovMesh SIH 2026 prototype. It serves as the unified frontend entry point for citizens to submit and track requests. GovMesh coordinates data exchanges across simulated backend registries under user-consent bounds and single timeline tracking.
+GovMesh demonstrates heterogeneous multi-protocol government system interoperability:
+- **Revenue Department**: REST / JSON API (Python FastAPI on Render)
+- **Food & Civil Supplies Department**: SOAP / XML WebService (Java 17 Spring Boot)
+- **Rural Development & Panchayat Raj**: Legacy File / CSV Ingestion (Node.js Express)
+- **Citizen Portal**: Unified client orchestrator (React + TypeScript)
+
+For in-depth technical guides, refer to:
+- [Architecture Design](docs/architecture.md)
+- [API Contract Specification](docs/api.md)
+- [Protocol Integration Guide](docs/integration.md)
+- [Deployment Configuration](docs/deployment.md)
 
 ---
 

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Application, ConsentRecord, Notification, DataSharingLog, DocumentRecord, ApplicationStatus } from '../types';
 import { mockApplications, mockConsents, mockNotifications, mockDataSharingLogs } from '../mock/data';
 import { ruralDepartmentApi } from '../services/ruralDepartmentApi';
+import api from '../services/api';
 
 export type ServiceWorkflowStep =
   | 'INPUT'
@@ -281,64 +282,93 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     if (isRealTransaction) {
-      console.log("[Integration API] Real Transaction mode active. Invoking Rural Department API...");
+      console.log("[GovMesh Core Ingress] Real Transaction mode active. Invoking GovMesh Core Orchestrator...");
       
-      // Update app state for real E2E attempt
-      newApp.status = "SUBMITTED";
-      newApp.progressPercent = 33;
-      newApp.steps[0] = { departmentName: "Revenue Department", action: "Verify/update address record", status: "SUCCESS", remarks: "Verified via Mock GovMesh Core" };
-      newApp.steps[1] = { departmentName: "Food & Civil Supplies Department", action: "Update eligible ration/PDS record", status: "SUCCESS", remarks: "Verified via Mock GovMesh Core" };
-      newApp.steps[2] = { departmentName: "Rural Development Department", action: "Update relevant local service record", status: "PROCESSING", remarks: "Sending transaction to Rural API..." };
-
       setApplications(prev => [newApp, ...prev]);
       setConsents(prev => [...newConsents, ...prev]);
       setSharingLogs(prev => [...newSharingLogs, ...prev]);
       
       setActiveAppId(appId);
-      setTrackingState('FOOD_SUCCESS');
+      setTrackingState('SUBMITTED');
       setCurrentStep('SUCCESS_SPLASH');
 
       try {
-        await ruralDepartmentApi.submitAddressChange({
+        const response = await api.submitGovMeshTransaction({
           applicationId: appId,
           citizenId: "GM-CIT-10001",
           serviceCode: "ADDRESS_CHANGE",
-          purpose: "Update rural development citizen record",
-          consentId: `CONSENT-${Math.floor(10000 + Math.random() * 90000)}-RURAL`,
+          purpose: "Unified residence address update across state registries",
+          consentId: `CONSENT-${Math.floor(10000 + Math.random() * 90000)}`,
+          consents: consentsApproved,
           citizen: {
-            name: ocrFields?.name || "Demo Citizen",
+            name: ocrFields?.name || "Aarav Sharma",
             address: {
-              line1: ocrFields?.address || "Demo Address",
+              line1: ocrFields?.address || "Flat 402, Shivajinagar Residency, FC Road",
               district: "Pune",
               state: "Maharashtra"
             }
           }
         });
-      } catch (err: any) {
-        console.error(`[Integration Service Error] ${err.message}`);
-        
-        // Update application state to FAILED
-        setApplications(prev => prev.map(a => {
-          if (a.id !== appId) return a;
-          const updatedSteps = [...a.steps];
-          updatedSteps[2] = {
-            ...updatedSteps[2],
-            status: "FAILED",
-            remarks: "GovMesh integration endpoint is not currently available."
-          };
-          return {
-            ...a,
-            status: "FAILED",
-            progressPercent: 66,
-            steps: updatedSteps
-          };
-        }));
-        
-        setTrackingState('RURAL_FAILURE');
 
+        if (response.success && response.status === 'COMPLETED') {
+          // Update application to COMPLETED
+          setApplications(prev => prev.map(a => {
+            if (a.id !== appId) return a;
+            return {
+              ...a,
+              status: "COMPLETED",
+              progressPercent: 100,
+              completedDepartments: 3,
+              steps: [
+                { departmentName: "Revenue Department", action: "Verify/update address record", status: "SUCCESS", remarks: "Verified via Revenue Land Registry on Render." },
+                { departmentName: "Food & Civil Supplies Department", action: "Update eligible ration/PDS record", status: "SUCCESS", remarks: "Synchronized via SOAP XML adapter." },
+                { departmentName: "Rural Development Department", action: "Update relevant local service record", status: "SUCCESS", remarks: "Synchronized via legacy CSV adapter." }
+              ]
+            };
+          }));
+
+          setTrackingState('RURAL_SUCCESS');
+
+          addNotification({
+            title: "Cross-Department Synchronization Complete",
+            description: `GovMesh successfully synchronized application ${appId} across Revenue, Food, and Rural registries.`,
+            type: "SUCCESS",
+            applicationId: appId,
+            priority: "HIGH"
+          });
+        } else {
+          // Update application to FAILED with real department error
+          const failedMsg = response.message || "Interoperability transaction failed.";
+          setApplications(prev => prev.map(a => {
+            if (a.id !== appId) return a;
+            return {
+              ...a,
+              status: "FAILED",
+              progressPercent: response.progressPercent || 40,
+              steps: [
+                { departmentName: "Revenue Department", action: "Verify/update address record", status: (response.progressPercent >= 40 ? "SUCCESS" : "FAILED"), remarks: "Verified." },
+                { departmentName: "Food & Civil Supplies Department", action: "Update eligible ration/PDS record", status: (response.progressPercent >= 70 ? "SUCCESS" : "FAILED"), remarks: "Food status" },
+                { departmentName: "Rural Development Department", action: "Update relevant local service record", status: (response.progressPercent >= 100 ? "SUCCESS" : "FAILED"), remarks: failedMsg }
+              ]
+            };
+          }));
+
+          setTrackingState('RURAL_FAILURE');
+
+          addNotification({
+            title: "Department Synchronization Exception",
+            description: failedMsg,
+            type: "ALERT",
+            applicationId: appId,
+            priority: "HIGH"
+          });
+        }
+      } catch (err: any) {
+        console.error(`[GovMesh Core Ingress Error] ${err.message}`);
+        setTrackingState('RURAL_FAILURE');
         addNotification({
-          title: "Rural Development Update Failed",
-          description: "Rural Development service is temporarily unavailable. Your request has not been marked as completed.",
+          title: "GovMesh Core Connection Exception",
+          description: `Unable to connect to GovMesh Core orchestrator. Details: ${err.message}`,
           type: "ALERT",
           applicationId: appId,
           priority: "HIGH"
