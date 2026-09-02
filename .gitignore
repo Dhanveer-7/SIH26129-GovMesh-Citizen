@@ -39,3 +39,16 @@ lerna-debug.log*
 *.njsproj
 *.sln
 *.sw?
+
+# Nested cloned repositories for SIH integration
+SIH/
+SIH-2026-Revenue-Dept/
+SIH26129-GovMesh-Rural-Develpment/
+rural-department-backend/
+
+# GovMesh Core backend artifacts
+govmesh-core-backend/node_modules/
+govmesh-core-backend/dist/
+govmesh-core-backend/.env
+
+
