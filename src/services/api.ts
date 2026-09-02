@@ -156,7 +156,9 @@ export const api = {
     consents?: { revenue: boolean; food: boolean; rural: boolean };
     citizen?: { name?: string; address?: { line1?: string; district?: string; state?: string } };
   }) => {
-    const coreUrl = import.meta.env.VITE_GOVMESH_CORE_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+    const configuredUrl = import.meta.env.VITE_GOVMESH_CORE_URL || import.meta.env.VITE_API_BASE_URL;
+    const coreUrl = configuredUrl ? configuredUrl.replace(/\/+$/, '') : (import.meta.env.DEV ? 'http://localhost:5000' : window.location.origin);
+    
     const res = await fetch(`${coreUrl}/api/govmesh/transactions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -166,7 +168,9 @@ export const api = {
   },
 
   getGovMeshTransactionStatus: async (applicationId: string) => {
-    const coreUrl = import.meta.env.VITE_GOVMESH_CORE_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+    const configuredUrl = import.meta.env.VITE_GOVMESH_CORE_URL || import.meta.env.VITE_API_BASE_URL;
+    const coreUrl = configuredUrl ? configuredUrl.replace(/\/+$/, '') : (import.meta.env.DEV ? 'http://localhost:5000' : window.location.origin);
+    
     const res = await fetch(`${coreUrl}/api/govmesh/transactions/${applicationId}`);
     return res.json();
   }
