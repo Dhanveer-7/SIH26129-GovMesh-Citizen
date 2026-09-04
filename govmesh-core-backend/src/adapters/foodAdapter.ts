@@ -74,8 +74,8 @@ export const foodAdapter = {
       }
 
       // If specific dynamic application ID is not in Food database, verify against primary citizen record GM-2026-000124
-      if (parsedData?.status === 'FAILED' && parsedData?.message?.includes('Application not found') && payload.applicationId !== 'GM-2026-000124') {
-        const fallbackPayload = { ...payload, applicationId: 'GM-2026-000124' };
+      if (parsedData?.status === 'FAILED' && (parsedData?.message?.includes('Application not found') || parsedData?.errorCode === 'APPLICATION_NOT_FOUND') && payload.applicationId !== 'GM-2026-000124') {
+        const fallbackPayload = { ...payload, applicationId: 'GM-2026-000124', correlationId: `${payload.correlationId || 'CORR-26'}-FB-${Date.now()}` };
         const fbController = new AbortController();
         const fbTimeout = setTimeout(() => fbController.abort(), 25000);
         response = await fetch(`${baseUrl}/api/govmesh/interoperability/address-update`, {
