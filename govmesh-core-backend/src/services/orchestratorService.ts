@@ -1,3 +1,6 @@
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import {
   CanonicalAddressChangeRequest,
   TransactionRecord,
@@ -17,6 +20,8 @@ import { auditService } from './auditService.js';
 import { cryptoService } from './cryptoService.js';
 import { evidenceService } from './evidenceService.js';
 
+const TX_STORE_PATH = path.join(os.tmpdir(), 'govmesh_tx_store.json');
+
 class OrchestratorService {
   private transactions: Map<string, TransactionRecord> = new Map();
   private adapters: Map<DepartmentCode, DepartmentAdapter> = new Map();
@@ -26,6 +31,33 @@ class OrchestratorService {
     this.registerAdapter('FOOD', foodAdapter);
     this.registerAdapter('RURAL_DEVELOPMENT', ruralAdapter);
     this.seedSample();
+    this.loadFromDisk();
+  }
+
+  private loadFromDisk() {
+    try {
+      if (fs.existsSync(TX_STORE_PATH)) {
+        const raw = fs.readFileSync(TX_STORE_PATH, 'utf-8');
+        const data: Record<string, TransactionRecord> = JSON.parse(raw);
+        for (const [k, v] of Object.entries(data)) {
+          this.transactions.set(k, v);
+        }
+      }
+    } catch {
+      // ignore read errors
+    }
+  }
+
+  private saveToDisk() {
+    try {
+      const obj: Record<string, TransactionRecord> = {};
+      for (const [k, v] of this.transactions.entries()) {
+        obj[k] = v;
+      }
+      fs.writeFileSync(TX_STORE_PATH, JSON.stringify(obj), 'utf-8');
+    } catch {
+      // ignore write errors
+    }
   }
 
   public registerAdapter(code: DepartmentCode, adapter: DepartmentAdapter): void {
@@ -426,6 +458,7 @@ class OrchestratorService {
     // 6. Response Aggregation Engine & Interoperability Evidence Sync
     const finalStatus = this.aggregateTransactionState(tx);
     this.transactions.set(appId, tx);
+    this.saveToDisk();
 
     return {
       success: finalStatus === 'COMPLETED' || finalStatus === 'PARTIALLY_COMPLETED' || finalStatus === 'IN_PROGRESS' || finalStatus === 'SUBMITTED' || finalStatus === 'PROCESSING',
@@ -539,6 +572,7 @@ class OrchestratorService {
     acknowledgementId?: string,
     timestamp?: string
   ): TransactionRecord | undefined {
+    this.loadFromDisk();
     const tx = this.transactions.get(applicationId);
     if (!tx) return undefined;
 
@@ -580,6 +614,7 @@ class OrchestratorService {
 
     this.aggregateTransactionState(tx);
     this.transactions.set(applicationId, tx);
+    this.saveToDisk();
     return tx;
   }
 
@@ -600,10 +635,12 @@ class OrchestratorService {
   }
 
   public getTransaction(applicationId: string): TransactionRecord | undefined {
+    this.loadFromDisk();
     return this.transactions.get(applicationId);
   }
 
   public getAllTransactions(): TransactionRecord[] {
+    this.loadFromDisk();
     return Array.from(this.transactions.values()).sort(
       (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
     );
