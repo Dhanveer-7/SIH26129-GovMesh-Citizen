@@ -51,4 +51,8 @@ govmesh-core-backend/node_modules/
 govmesh-core-backend/dist/
 govmesh-core-backend/.env
 
+# Scratch and audit working directories
+scratch/
+
+
 
