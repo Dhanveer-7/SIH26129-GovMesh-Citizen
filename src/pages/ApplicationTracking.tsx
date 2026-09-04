@@ -6,10 +6,11 @@ import {
   ArrowRight, FileText, LayoutList, History, ShieldAlert
 } from 'lucide-react';
 import { Modal } from '../components/Modal';
+import api from '../services/api';
 
 export const ApplicationTracking: React.FC = () => {
   const { 
-    applications, trackingState, triggerDemoState, uploadDocument, documents, activeAppId
+    applications, setApplications, trackingState, triggerDemoState, uploadDocument, documents, activeAppId
   } = useDemo();
 
   const [searchId, setSearchId] = useState(activeAppId || 'GM-2026-000124');
@@ -22,20 +23,92 @@ export const ApplicationTracking: React.FC = () => {
     }
   }, [activeAppId]);
 
+  // Synchronize live status with GovMesh Core cloud orchestrator
+  useEffect(() => {
+    let isMounted = true;
+    async function syncLiveStatus() {
+      if (!selectedAppId) return;
+      try {
+        const liveRes = await api.getGovMeshTransactionStatus(selectedAppId);
+        if (isMounted && liveRes && liveRes.data) {
+          const liveTx = liveRes.data;
+          setApplications(prev => {
+            const exists = prev.some(a => a.id === selectedAppId);
+            if (!exists) {
+              const newLiveApp = {
+                id: selectedAppId,
+                serviceId: "address-update",
+                serviceName: "Address Update",
+                workflowId: "ADDRESS_CHANGE_V1",
+                timestamp: liveTx.updatedAt || new Date().toISOString(),
+                correlationId: liveTx.correlationId || `CORR-26-${selectedAppId}`,
+                status: liveTx.status,
+                progressPercent: liveTx.progressPercent,
+                completedDepartments: liveTx.completedDepartments,
+                totalDepartments: liveTx.totalDepartments || 3,
+                steps: liveTx.steps?.map((s: any) => ({
+                  departmentName: s.departmentName,
+                  action: s.departmentCode === 'REVENUE' ? 'Verify/update address record' : (s.departmentCode === 'FOOD' ? 'Update eligible ration/PDS record' : 'Update relevant local service record'),
+                  status: s.status,
+                  remarks: s.remarks,
+                  timestamp: s.timestamp
+                })) || [],
+                uploadedDocuments: []
+              };
+              return [newLiveApp, ...prev];
+            }
+            return prev.map(a => {
+              if (a.id !== selectedAppId) return a;
+              return {
+                ...a,
+                status: liveTx.status,
+                progressPercent: liveTx.progressPercent,
+                completedDepartments: liveTx.completedDepartments,
+                steps: liveTx.steps?.map((s: any) => ({
+                  departmentName: s.departmentName,
+                  action: s.departmentCode === 'REVENUE' ? 'Verify/update address record' : (s.departmentCode === 'FOOD' ? 'Update eligible ration/PDS record' : 'Update relevant local service record'),
+                  status: s.status,
+                  remarks: s.remarks,
+                  timestamp: s.timestamp
+                })) || a.steps
+              };
+            });
+          });
+        }
+      } catch (err) {
+        console.warn('Could not sync live status:', err);
+      }
+    }
+    syncLiveStatus();
+    return () => { isMounted = false; };
+  }, [selectedAppId]);
+
   const [correctedFile, setCorrectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!searchId.trim()) return;
+    const query = searchId.trim();
+    if (!query) return;
     
-    const exists = applications.find(app => app.id.toLowerCase() === searchId.toLowerCase().trim());
+    const exists = applications.find(app => app.id.toLowerCase() === query.toLowerCase());
     if (exists) {
       setSelectedAppId(exists.id);
-    } else {
-      alert("Application ID not found in prototype environment. Try searching: GM-2026-000124 or GM-2026-000087");
+      return;
     }
+
+    try {
+      const liveRes = await api.getGovMeshTransactionStatus(query);
+      if (liveRes && liveRes.data) {
+        setSelectedAppId(query);
+        return;
+      }
+    } catch (err) {
+      console.warn('Search query error:', err);
+    }
+    
+    alert("Application ID not found in prototype environment. Try searching: GM-2026-000124 or GM-2026-000087");
   };
 
   const app = applications.find(a => a.id === selectedAppId) || applications[0];

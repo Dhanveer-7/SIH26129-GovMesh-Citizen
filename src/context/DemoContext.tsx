@@ -57,6 +57,8 @@ interface DemoContextType {
   updateOcrField: (key: 'name' | 'address' | 'issueDate', val: string) => void;
   submitServiceRequest: (consentsApproved: { revenue: boolean; food: boolean; rural: boolean }) => void;
   
+  setApplications: React.Dispatch<React.SetStateAction<Application[]>>;
+  
   // Controller State Triggers
   triggerDemoState: (state: TrackingDemoState) => void;
   resetDemo: () => void;
@@ -105,7 +107,7 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return (localStorage.getItem('govmesh_tracking_state') as TrackingDemoState) || 'SUBMITTED';
   });
 
-  const [isRealTransaction, setIsRealTransaction] = useState(false);
+  const [isRealTransaction, setIsRealTransaction] = useState(true);
 
   // Save list state to local storage
   useEffect(() => {
@@ -617,6 +619,7 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return (
     <DemoContext.Provider value={{
       applications,
+      setApplications,
       consents,
       notifications,
       sharingLogs,
