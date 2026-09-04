@@ -8,6 +8,93 @@ import {
 } from 'lucide-react';
 import { Modal } from '../components/Modal';
 
+interface IdentifiedServiceInfo {
+  title: string;
+  category: string;
+  description: string;
+  departments: { num: number; name: string; desc: string }[];
+}
+
+const getIdentifiedServiceInfo = (query: string): IdentifiedServiceInfo => {
+  const q = (query || '').toLowerCase().trim();
+
+  if (q.includes('income') || q.includes('salary') || q.includes('certificate') || q.includes('caste') || q.includes('domicile') || q.includes('tahsildar') || q.includes('annual')) {
+    return {
+      title: "Income & Asset Certificate",
+      category: "Personal & Civic Certification",
+      description: `Based on your search prompt: "${query}", GovMesh has identified that this action impacts verified revenue authority records:`,
+      departments: [
+        { num: 1, name: "Revenue Department", desc: "Validates annual family financial declaration and issues digitally signed certificate." },
+        { num: 2, name: "Food & Civil Supplies", desc: "Cross-checks PDS economic threshold and subsidy allocation criteria." },
+        { num: 3, name: "Rural Development", desc: "Synchronizes verified income tier with Gram Panchayat welfare schemes." }
+      ]
+    };
+  }
+
+  if (q.includes('ration') || q.includes('food') || q.includes('pds') || q.includes('grain') || q.includes('quota') || q.includes('bpl') || q.includes('apl')) {
+    return {
+      title: "Ration Card & Food Quota Sync",
+      category: "Public Distribution System",
+      description: `Based on your search prompt: "${query}", GovMesh has identified that this action impacts connected food and civil registries:`,
+      departments: [
+        { num: 1, name: "Food & Civil Supplies", desc: "Updates family beneficiary quota and Fair Price Shop (FPS) allocation records." },
+        { num: 2, name: "Revenue Department", desc: "Verifies jurisdiction and cross-checks civic residence validation." },
+        { num: 3, name: "Rural Development", desc: "Synchronizes local Gram Panchayat BPL/APL welfare beneficiary registry." }
+      ]
+    };
+  }
+
+  if (q.includes('utility') || q.includes('water') || q.includes('electricity') || q.includes('tap') || q.includes('sanitation') || q.includes('panchayat') || q.includes('village')) {
+    return {
+      title: "Rural Utility & Civic Connection",
+      category: "Local Administration",
+      description: `Based on your search prompt: "${query}", GovMesh has identified that this action impacts rural administration registries:`,
+      departments: [
+        { num: 1, name: "Rural Development", desc: "Processes local Gram Panchayat utility connection and resident ledger entry." },
+        { num: 2, name: "Revenue Department", desc: "Validates land property card and tax clearance jurisdiction." },
+        { num: 3, name: "Municipal & Public Works", desc: "Coordinates infrastructure network provisioning and pipeline connection." }
+      ]
+    };
+  }
+
+  if (q.includes('pension') || q.includes('senior') || q.includes('widow') || q.includes('disab') || q.includes('dbt') || q.includes('scheme') || q.includes('benefit')) {
+    return {
+      title: "Social Welfare & DBT Benefits",
+      category: "Social Security",
+      description: `Based on your search prompt: "${query}", GovMesh has identified that this action impacts state welfare registries:`,
+      departments: [
+        { num: 1, name: "Rural Development", desc: "Registers social security pension application in local Panchayat roster." },
+        { num: 2, name: "Food & Civil Supplies", desc: "Verifies family economic criteria and Antyodaya food security status." },
+        { num: 3, name: "Revenue Department", desc: "Validates domicile and age eligibility from civic land & tax records." }
+      ]
+    };
+  }
+
+  if (q.includes('name') || q.includes('spelling') || q.includes('correction')) {
+    return {
+      title: "Name & Civic Profile Correction",
+      category: "Civic Registry",
+      description: `Based on your search prompt: "${query}", GovMesh has identified that this action synchronizes official civic identity across three connected registries:`,
+      departments: [
+        { num: 1, name: "Revenue Department", desc: "Synchronizes official legal name on land holdings and civic property indices." },
+        { num: 2, name: "Food & Civil Supplies", desc: "Updates beneficiary name on ration cards and family grain allocation logs." },
+        { num: 3, name: "Rural Development", desc: "Synchronizes local Panchayat resident roster and village voter index." }
+      ]
+    };
+  }
+
+  return {
+    title: "Address Change",
+    category: "Unified Residential Registry",
+    description: `Based on your search prompt: "${query || 'Address Change'}", GovMesh has identified that this action impacts three connected government registries:`,
+    departments: [
+      { num: 1, name: "Revenue Department", desc: "Updates primary civic address indices and land registries." },
+      { num: 2, name: "Food & Civil Supplies", desc: "Updates eligible Public Distribution System (PDS) ration details." },
+      { num: 3, name: "Rural Development", desc: "Synchronizes local Panchayat databases and municipal files." }
+    ]
+  };
+};
+
 export const ServiceWorkflow: React.FC = () => {
   const {
     currentStep, setWorkflowStep, nlQuery, submitServiceRequest,
@@ -16,14 +103,7 @@ export const ServiceWorkflow: React.FC = () => {
   } = useDemo();
   const navigate = useNavigate();
 
-  const getIdentifiedService = () => {
-    if (!nlQuery) return "Address Change";
-    const q = nlQuery.toLowerCase();
-    if (q.includes('name')) return "Name Update";
-    if (q.includes('ration') || q.includes('food') || q.includes('pds')) return "Ration Card Update";
-    if (q.includes('land') || q.includes('revenue')) return "Land Record Synchronization";
-    return "Address Change";
-  };
+  const serviceInfo = getIdentifiedServiceInfo(nlQuery);
 
   // Workflow steps for the ProgressBar
   const steps = [
@@ -145,46 +225,36 @@ export const ServiceWorkflow: React.FC = () => {
               </div>
               <div>
                 <span className="text-[10px] uppercase font-bold tracking-wider text-slate-450">
-                  GovMesh AI Assistant Suggestion
+                  GovMesh AI Assistant Suggestion • {serviceInfo.category}
                 </span>
                 <h2 className="text-lg font-extrabold text-slate-800 leading-tight">
-                  Request Identified: <span className="text-indigo-600">{getIdentifiedService()}</span>
+                  Request Identified: <span className="text-indigo-600">{serviceInfo.title}</span>
                 </h2>
               </div>
             </div>
 
             <p className="text-xs text-slate-550 leading-relaxed font-semibold">
-              Based on your search prompt: <span className="italic font-bold text-slate-800 bg-slate-50 px-2 py-1 rounded">"{nlQuery}"</span>, GovMesh has identified that this action impacts three connected government registries:
+              {serviceInfo.description}
             </p>
 
-            {getIdentifiedService() !== "Address Change" && (
+            {serviceInfo.title !== "Address Change" && (
               <div className="p-3 bg-amber-50 border border-amber-150 rounded-xl text-[10px] text-amber-800 font-semibold leading-relaxed flex items-start gap-2.5 shadow-gov-sm">
                 <span className="text-xs">⚠️</span>
                 <span>
-                  In the GovMesh Demo Sandbox, all registry update queries are mapped to the primary <strong>Address Update</strong> coordination workflow to demonstrate end-to-end integration logic.
+                  In the GovMesh Demo Sandbox, multi-registry verification queries are previewed and linked through the unified coordination engine to demonstrate end-to-end integration across departments.
                 </span>
               </div>
             )}
 
             {/* Suggested Departments */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-2">
-                <span className="w-6 h-6 rounded bg-slate-200 flex items-center justify-center font-bold text-[10px] text-slate-700">1</span>
-                <h4 className="font-bold text-xs text-slate-800">Revenue Department</h4>
-                <p className="text-[10px] text-slate-500 leading-normal">Updates primary civic address indices and land registries.</p>
-              </div>
-
-              <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-2">
-                <span className="w-6 h-6 rounded bg-slate-200 flex items-center justify-center font-bold text-[10px] text-slate-700">2</span>
-                <h4 className="font-bold text-xs text-slate-800">Food & Civil Supplies</h4>
-                <p className="text-[10px] text-slate-500 leading-normal">Updates eligible Public Distribution System (PDS) ration details.</p>
-              </div>
-
-              <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-2">
-                <span className="w-6 h-6 rounded bg-slate-200 flex items-center justify-center font-bold text-[10px] text-slate-700">3</span>
-                <h4 className="font-bold text-xs text-slate-800">Rural Development</h4>
-                <p className="text-[10px] text-slate-500 leading-normal">Synchronizes local Panchayat databases and municipal files.</p>
-              </div>
+              {serviceInfo.departments.map((dept) => (
+                <div key={dept.num} className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-2">
+                  <span className="w-6 h-6 rounded bg-slate-200 flex items-center justify-center font-bold text-[10px] text-slate-700">{dept.num}</span>
+                  <h4 className="font-bold text-xs text-slate-800">{dept.name}</h4>
+                  <p className="text-[10px] text-slate-500 leading-normal">{dept.desc}</p>
+                </div>
+              ))}
             </div>
 
             {/* AI Disclaimer */}
