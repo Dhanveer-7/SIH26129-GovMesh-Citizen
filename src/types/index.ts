@@ -19,14 +19,17 @@ export type ApplicationStatus =
   | 'ACTION_REQUIRED'
   | 'PARTIALLY_COMPLETED'
   | 'FAILED'
+  | 'RETRY_REQUIRED'
   | 'RETRYING'
   | 'COMPLETED'
   | 'CANCELLED';
 
 export interface DepartmentStep {
   departmentName: string;
+  departmentCode?: string;
+  protocol?: string;
   action: string;
-  status: 'PENDING' | 'PROCESSING' | 'SUCCESS' | 'FAILED' | 'RETRYING';
+  status: 'PENDING' | 'PROCESSING' | 'SUCCESS' | 'PARTIALLY_COMPLETED' | 'FAILED' | 'RETRYING' | 'ACTION_REQUIRED' | 'CONSENT_BLOCKED';
   timestamp?: string;
   remarks?: string;
 }

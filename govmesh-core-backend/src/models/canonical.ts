@@ -1,4 +1,4 @@
-export type DepartmentCode = 'REVENUE' | 'FOOD' | 'RURAL_DEVELOPMENT';
+export type DepartmentCode = 'REVENUE' | 'FOOD' | 'RURAL_DEVELOPMENT' | string;
 
 export type TransactionStatus = 
   | 'SUBMITTED' 
@@ -6,10 +6,24 @@ export type TransactionStatus =
   | 'SENT_TO_DEPARTMENT' 
   | 'RECEIVED' 
   | 'PROCESSING' 
+  | 'PARTIALLY_COMPLETED'
   | 'ACTION_REQUIRED' 
   | 'COMPLETED' 
   | 'FAILED' 
+  | 'RETRY_REQUIRED'
   | 'RETRYING';
+
+export type DepartmentStepStatus =
+  | 'PENDING'
+  | 'PROCESSING'
+  | 'SUCCESS'
+  | 'PARTIALLY_COMPLETED'
+  | 'FAILED'
+  | 'RETRYING'
+  | 'ACTION_REQUIRED'
+  | 'CONSENT_BLOCKED';
+
+export type ServiceExecutionMode = 'PARALLEL_FAN_OUT' | 'SEQUENTIAL_VERIFIED';
 
 export interface AddressInfo {
   line1?: string;
@@ -59,8 +73,9 @@ export interface CanonicalAddressChangeRequest {
   applicationId: string;
   citizenId: string;
   correlationId?: string;
+  idempotencyKey?: string;
   sourceDepartment?: string;
-  targetDepartment?: string;
+  targetDepartments?: DepartmentCode[];
   departmentCode?: DepartmentCode;
   serviceCode: string;
   purpose: string;
@@ -69,6 +84,7 @@ export interface CanonicalAddressChangeRequest {
     revenue?: boolean;
     food?: boolean;
     rural?: boolean;
+    [key: string]: boolean | undefined;
   };
   citizen: CitizenInfo;
   verification?: VerificationInfo;
@@ -82,7 +98,7 @@ export interface DepartmentStepResult {
   departmentCode: DepartmentCode;
   departmentName: string;
   protocol: 'REST/JSON' | 'SOAP/XML' | 'CSV/SFTP';
-  status: 'PENDING' | 'SUCCESS' | 'PROCESSING' | 'FAILED' | 'RETRYING' | 'ACTION_REQUIRED';
+  status: DepartmentStepStatus;
   timestamp: string;
   remarks: string;
   departmentTransactionId?: string;
@@ -97,6 +113,7 @@ export interface TransactionRecord {
   serviceCode: string;
   purpose: string;
   consentId: string;
+  targetDepartments: DepartmentCode[];
   createdAt: string;
   updatedAt: string;
   status: TransactionStatus;
@@ -116,6 +133,8 @@ export interface CanonicalTransactionResponse {
   status: TransactionStatus;
   departmentCode?: DepartmentCode;
   progressPercent: number;
+  completedDepartments?: number;
+  totalDepartments?: number;
   message: string;
   transaction?: TransactionRecord;
   errorCode?: string;
@@ -127,15 +146,19 @@ export interface AuditLogEntry {
   correlationId: string;
   applicationId: string;
   event: 
-    | 'REQUEST_CREATED'
+    | 'TRANSACTION_CREATED'
     | 'CONSENT_VERIFIED'
-    | 'ROUTING'
+    | 'ROUTING_STARTED'
     | 'DEPARTMENT_REQUEST_SENT'
     | 'DEPARTMENT_RESPONSE_RECEIVED'
-    | 'PROCESSING'
-    | 'FAILED'
-    | 'RETRY'
-    | 'COMPLETED';
+    | 'DEPARTMENT_PROCESSING'
+    | 'DEPARTMENT_COMPLETED'
+    | 'DEPARTMENT_FAILED'
+    | 'TRANSACTION_PARTIALLY_COMPLETED'
+    | 'TRANSACTION_COMPLETED'
+    | 'RETRY_STARTED'
+    | 'RETRY_COMPLETED'
+    | 'FAILED';
   department?: string;
   actor: string;
   result: 'SUCCESS' | 'FAILED' | 'BLOCKED' | 'PENDING' | 'RETRY';
@@ -150,4 +173,14 @@ export interface ServiceRegistryEntry {
   enabled: boolean;
   supportedServices: string[];
   description: string;
+}
+
+export interface ServiceDefinition {
+  serviceCode: string;
+  serviceName: string;
+  description: string;
+  targetDepartments: DepartmentCode[];
+  requiredConsents: string[];
+  executionMode: ServiceExecutionMode;
+  requiredFields: string[];
 }

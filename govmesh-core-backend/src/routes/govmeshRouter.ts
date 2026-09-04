@@ -6,14 +6,11 @@ import { CanonicalAddressChangeRequest } from '../models/canonical.js';
 
 const router = express.Router();
 
-// ============================================================
-// 1. HEALTH & SYSTEM MONITORING
-// ============================================================
 router.get(['/', '/health', '/api/health'], (req, res) => {
   res.json({
     status: 'ok',
     service: 'govmesh-core-backend',
-    version: '1.0.0',
+    version: '2.0.0-dynamic',
     environment: process.env.NODE_ENV || 'production',
     timestamp: new Date().toISOString(),
     departments: serviceRegistry.getAllDepartments().map(d => ({
@@ -21,24 +18,28 @@ router.get(['/', '/health', '/api/health'], (req, res) => {
       name: d.departmentName,
       status: d.enabled ? 'ONLINE' : 'DISABLED',
       protocol: d.protocol,
-      endpoint: d.baseUrl
+      endpoint: d.baseUrl,
+      supportedServices: d.supportedServices
     }))
   });
 });
 
-// ============================================================
-// 2. SERVICE REGISTRY
-// ============================================================
-router.get('/api/govmesh/registry', (req, res) => {
+router.get('/api/govmesh/services', (req, res) => {
   res.json({
     success: true,
-    registry: serviceRegistry.getAllDepartments()
+    count: serviceRegistry.getAllServices().length,
+    services: serviceRegistry.getAllServices()
   });
 });
 
-// ============================================================
-// 3. CANONICAL TRANSACTION INGRESS & ORCHESTRATION
-// ============================================================
+router.get('/api/govmesh/registry', (req, res) => {
+  res.json({
+    success: true,
+    count: serviceRegistry.getAllDepartments().length,
+    departments: serviceRegistry.getAllDepartments()
+  });
+});
+
 router.post('/api/govmesh/transactions', async (req, res) => {
   try {
     const canonicalRequest = req.body as CanonicalAddressChangeRequest;
@@ -51,11 +52,11 @@ router.post('/api/govmesh/transactions', async (req, res) => {
     }
 
     const result = await orchestratorService.processTransaction(canonicalRequest);
-    const httpStatus = result.success ? 200 : (result.status === 'ACTION_REQUIRED' ? 422 : 200);
+    const httpStatus = result.status === 'ACTION_REQUIRED' ? 422 : 200;
 
     res.status(httpStatus).json(result);
   } catch (err: any) {
-    console.error('[GovMesh Core Error]', err);
+    console.error('[GovMesh Core Ingress Error]', err);
     res.status(500).json({
       success: false,
       message: `Internal Orchestration Error: ${err.message}`
@@ -63,9 +64,6 @@ router.post('/api/govmesh/transactions', async (req, res) => {
   }
 });
 
-// ============================================================
-// 4. TRANSACTION STATUS & TRACKING
-// ============================================================
 router.get('/api/govmesh/transactions/:applicationId', (req, res) => {
   const { applicationId } = req.params;
   const tx = orchestratorService.getTransaction(applicationId);
@@ -80,10 +78,13 @@ router.get('/api/govmesh/transactions/:applicationId', (req, res) => {
   res.json({
     success: true,
     applicationId: tx.applicationId,
+    correlationId: tx.correlationId,
+    serviceCode: tx.serviceCode,
     status: tx.status,
     progressPercent: tx.progressPercent,
     completedDepartments: tx.completedDepartments,
     totalDepartments: tx.totalDepartments,
+    targetDepartments: tx.targetDepartments,
     transaction: tx
   });
 });
@@ -97,9 +98,6 @@ router.get('/api/govmesh/transactions', (req, res) => {
   });
 });
 
-// ============================================================
-// 5. OPERATIONAL RETRY
-// ============================================================
 router.post('/api/govmesh/transactions/:applicationId/retry', async (req, res) => {
   const { applicationId } = req.params;
   try {
@@ -113,9 +111,6 @@ router.post('/api/govmesh/transactions/:applicationId/retry', async (req, res) =
   }
 });
 
-// ============================================================
-// 6. AUDIT TRAILS
-// ============================================================
 router.get('/api/govmesh/audit/:applicationId', (req, res) => {
   const { applicationId } = req.params;
   const logs = auditService.getLogsByApplicationId(applicationId);

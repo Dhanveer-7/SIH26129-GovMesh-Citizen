@@ -153,7 +153,7 @@ export const api = {
     serviceCode?: string;
     purpose?: string;
     consentId?: string;
-    consents?: { revenue: boolean; food: boolean; rural: boolean };
+    consents?: { revenue: boolean; food: boolean; rural: boolean; [key: string]: boolean | undefined };
     citizen?: { name?: string; address?: { line1?: string; district?: string; state?: string } };
   }) => {
     const configuredUrl = import.meta.env.VITE_GOVMESH_CORE_URL || import.meta.env.VITE_API_BASE_URL;
@@ -172,6 +172,33 @@ export const api = {
     const coreUrl = configuredUrl ? configuredUrl.replace(/\/+$/, '') : (import.meta.env.DEV ? 'http://localhost:5000' : window.location.origin);
     
     const res = await fetch(`${coreUrl}/api/govmesh/transactions/${applicationId}`);
+    return res.json();
+  },
+
+  retryGovMeshTransaction: async (applicationId: string) => {
+    const configuredUrl = import.meta.env.VITE_GOVMESH_CORE_URL || import.meta.env.VITE_API_BASE_URL;
+    const coreUrl = configuredUrl ? configuredUrl.replace(/\/+$/, '') : (import.meta.env.DEV ? 'http://localhost:5000' : window.location.origin);
+    
+    const res = await fetch(`${coreUrl}/api/govmesh/transactions/${applicationId}/retry`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    return res.json();
+  },
+
+  getGovMeshServices: async () => {
+    const configuredUrl = import.meta.env.VITE_GOVMESH_CORE_URL || import.meta.env.VITE_API_BASE_URL;
+    const coreUrl = configuredUrl ? configuredUrl.replace(/\/+$/, '') : (import.meta.env.DEV ? 'http://localhost:5000' : window.location.origin);
+    
+    const res = await fetch(`${coreUrl}/api/govmesh/services`);
+    return res.json();
+  },
+
+  getGovMeshAudit: async (applicationId: string) => {
+    const configuredUrl = import.meta.env.VITE_GOVMESH_CORE_URL || import.meta.env.VITE_API_BASE_URL;
+    const coreUrl = configuredUrl ? configuredUrl.replace(/\/+$/, '') : (import.meta.env.DEV ? 'http://localhost:5000' : window.location.origin);
+    
+    const res = await fetch(`${coreUrl}/api/govmesh/audit/${applicationId}`);
     return res.json();
   }
 };
