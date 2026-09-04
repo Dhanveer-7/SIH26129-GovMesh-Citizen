@@ -2,6 +2,7 @@ import express from 'express';
 import { orchestratorService } from '../services/orchestratorService.js';
 import { serviceRegistry } from '../registry/serviceRegistry.js';
 import { auditService } from '../services/auditService.js';
+import { evidenceService } from '../services/evidenceService.js';
 import { CanonicalAddressChangeRequest } from '../models/canonical.js';
 
 const router = express.Router();
@@ -10,7 +11,7 @@ router.get(['/', '/health', '/api/health'], (req, res) => {
   res.json({
     status: 'ok',
     service: 'govmesh-core-backend',
-    version: '2.0.0-dynamic',
+    version: '2.1.0-traceability',
     environment: process.env.NODE_ENV || 'production',
     timestamp: new Date().toISOString(),
     departments: serviceRegistry.getAllDepartments().map(d => ({
@@ -79,6 +80,9 @@ router.get('/api/govmesh/transactions/:applicationId', (req, res) => {
     success: true,
     applicationId: tx.applicationId,
     correlationId: tx.correlationId,
+    requestVersion: tx.requestVersion,
+    canonicalRequestHash: tx.canonicalRequestHash,
+    documentHash: tx.documentHash,
     serviceCode: tx.serviceCode,
     status: tx.status,
     progressPercent: tx.progressPercent,
@@ -109,6 +113,64 @@ router.post('/api/govmesh/transactions/:applicationId/retry', async (req, res) =
       message: err.message
     });
   }
+});
+
+// Evidence & End-to-End Traceability Endpoints
+
+router.get('/api/govmesh/evidence/:applicationId', (req, res) => {
+  const { applicationId } = req.params;
+  const tx = orchestratorService.getTransaction(applicationId);
+  const evidence = evidenceService.getInteroperabilityEvidence(applicationId, tx);
+
+  if (!evidence) {
+    return res.status(404).json({
+      success: false,
+      message: `No interoperability evidence found for application '${applicationId}'.`
+    });
+  }
+
+  res.json({
+    success: true,
+    applicationId,
+    evidence
+  });
+});
+
+router.get('/api/govmesh/evidence/:applicationId/department/:departmentCode', (req, res) => {
+  const { applicationId, departmentCode } = req.params;
+  const deptReq = evidenceService.getDepartmentReceivedRequest(applicationId, departmentCode.toUpperCase());
+
+  if (!deptReq) {
+    return res.status(404).json({
+      success: false,
+      message: `No received request record found for department '${departmentCode}' under application '${applicationId}'.`
+    });
+  }
+
+  res.json({
+    success: true,
+    applicationId,
+    departmentCode: departmentCode.toUpperCase(),
+    receivedRequest: deptReq
+  });
+});
+
+router.get('/api/govmesh/evidence/:applicationId/documents/:documentId', (req, res) => {
+  const { applicationId, documentId } = req.params;
+  const doc = evidenceService.getDocument(applicationId, documentId);
+
+  if (!doc) {
+    return res.status(404).json({
+      success: false,
+      message: `Document '${documentId}' not found for application '${applicationId}'.`
+    });
+  }
+
+  res.json({
+    success: true,
+    applicationId,
+    document: doc
+  });
 });
 
 router.get('/api/govmesh/audit/:applicationId', (req, res) => {

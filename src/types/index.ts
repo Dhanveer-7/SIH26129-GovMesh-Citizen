@@ -29,9 +29,16 @@ export interface DepartmentStep {
   departmentCode?: string;
   protocol?: string;
   action: string;
-  status: 'PENDING' | 'PROCESSING' | 'SUCCESS' | 'PARTIALLY_COMPLETED' | 'FAILED' | 'RETRYING' | 'ACTION_REQUIRED' | 'CONSENT_BLOCKED';
+  status: 'PENDING' | 'SENT' | 'RECEIVED' | 'VALIDATING' | 'ACCEPTED' | 'PROCESSING' | 'SUCCESS' | 'PARTIALLY_COMPLETED' | 'FAILED' | 'RETRYING' | 'ACTION_REQUIRED' | 'CONSENT_BLOCKED';
   timestamp?: string;
+  receivedAt?: string;
+  acceptedAt?: string;
+  completedAt?: string;
   remarks?: string;
+  requestHash?: string;
+  hashStatus?: 'VERIFIED' | 'MISMATCH';
+  documentHash?: string;
+  acknowledgementId?: string;
 }
 
 export interface Application {
@@ -41,8 +48,11 @@ export interface Application {
   workflowId: string;
   timestamp: string;
   correlationId: string;
+  requestVersion?: number;
+  canonicalRequestHash?: string;
+  documentHash?: string;
   status: ApplicationStatus;
-  progressPercent: number; // e.g., 66%
+  progressPercent: number;
   completedDepartments: number;
   totalDepartments: number;
   steps: DepartmentStep[];
@@ -66,13 +76,99 @@ export interface DocumentRecord {
   type: string;
   size: string;
   uploadedAt: string;
+  receivedAt?: string;
+  documentHash?: string;
+  checksum?: string;
   status: 'UPLOADED' | 'ANALYZING' | 'VERIFIED' | 'FAILED';
   extractionResult?: {
     name: string;
     address: string;
     issueDate: string;
   };
-  confidenceScore?: number; // 0 to 100
+  confidenceScore?: number;
+}
+
+export interface DocumentEvidenceRecord {
+  documentId: string;
+  applicationId: string;
+  documentName: string;
+  documentType: string;
+  documentVersion: number;
+  documentSize: string;
+  documentHash: string;
+  uploadedAt: string;
+  receivedAt: string;
+  sourceSystem: string;
+  receivedFrom: string;
+  contentType: string;
+  integrityStatus: 'VERIFIED' | 'MISMATCH';
+  downloadUrl?: string;
+  contentPreview?: string;
+}
+
+export interface DepartmentAcknowledgement {
+  acknowledgementId: string;
+  applicationId: string;
+  correlationId: string;
+  departmentCode: string;
+  requestVersion: number;
+  receivedAt: string;
+  acceptedAt?: string;
+  completedAt?: string;
+  status: 'RECEIVED' | 'ACCEPTED' | 'PROCESSING' | 'COMPLETED' | 'REJECTED';
+  requestHash: string;
+  documentHash?: string;
+  hashStatus: 'VERIFIED' | 'MISMATCH';
+  remarks: string;
+}
+
+export interface DepartmentReceivedRequest {
+  applicationId: string;
+  correlationId: string;
+  serviceCode: string;
+  departmentCode: string;
+  departmentName: string;
+  sourceSystem: string;
+  receivedAt: string;
+  acceptedAt?: string;
+  completedAt?: string;
+  requestVersion: number;
+  requestHash: string;
+  hashStatus: 'VERIFIED' | 'MISMATCH';
+  citizenId: string;
+  authorizedFields: string[];
+  receivedPayload: Record<string, any>;
+  documents: DocumentEvidenceRecord[];
+  lifecycleState: string;
+  acknowledgement: DepartmentAcknowledgement;
+  updatedAt: string;
+}
+
+export interface InteroperabilityEvidence {
+  applicationId: string;
+  correlationId: string;
+  serviceCode: string;
+  requestVersion: number;
+  createdAt: string;
+  canonicalRequestHash: string;
+  documentHash?: string;
+  overallStatus: ApplicationStatus;
+  progressPercent: number;
+  departmentDelivery: Record<string, {
+    departmentCode: string;
+    departmentName: string;
+    protocol: string;
+    lifecycleState: string;
+    receivedAt: string;
+    acceptedAt?: string;
+    completedAt?: string;
+    requestHash: string;
+    hashStatus: 'VERIFIED' | 'MISMATCH';
+    documentHash?: string;
+    documentIntegrity: 'VERIFIED' | 'NOT_APPLICABLE';
+    acknowledgementId: string;
+  }>;
+  receivedRequests: DepartmentReceivedRequest[];
 }
 
 export interface DataSharingLog {

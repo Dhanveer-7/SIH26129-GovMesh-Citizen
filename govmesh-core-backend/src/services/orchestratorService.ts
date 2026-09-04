@@ -4,7 +4,8 @@ import {
   CanonicalTransactionResponse,
   DepartmentStepResult,
   DepartmentCode,
-  TransactionStatus
+  TransactionStatus,
+  ProofDocument
 } from '../models/canonical.js';
 import { DepartmentAdapter } from '../adapters/departmentAdapter.js';
 import { revenueAdapter } from '../adapters/revenueAdapter.js';
@@ -12,6 +13,8 @@ import { foodAdapter } from '../adapters/foodAdapter.js';
 import { ruralAdapter } from '../adapters/ruralAdapter.js';
 import { serviceRegistry } from '../registry/serviceRegistry.js';
 import { auditService } from './auditService.js';
+import { cryptoService } from './cryptoService.js';
+import { evidenceService } from './evidenceService.js';
 
 class OrchestratorService {
   private transactions: Map<string, TransactionRecord> = new Map();
@@ -34,20 +37,45 @@ class OrchestratorService {
 
   private seedSample() {
     const defaultAppId = 'GM-2026-000124';
-    const now = new Date().toISOString();
+    const corrId = 'CORR-26-000124';
+    const createdUtc = '2026-09-04T04:35:20.000Z';
+    const reqHash = 'sha256:7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069';
+    const docHash = 'sha256:a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e';
+
+    const defaultDocs: ProofDocument[] = [
+      {
+        id: 'DOC-ADDR-PROOF-124',
+        name: 'address-proof-demo.pdf',
+        type: 'ELECTRICITY_BILL',
+        size: '1.2 MB',
+        checksum: docHash,
+        documentHash: docHash,
+        version: 1,
+        uploadedAt: createdUtc,
+        contentType: 'application/pdf'
+      }
+    ];
+
     this.transactions.set(defaultAppId, {
       applicationId: defaultAppId,
-      correlationId: 'CORR-26-000124',
+      correlationId: corrId,
+      requestVersion: 1,
+      canonicalRequestHash: reqHash,
+      documentHash: docHash,
       citizenId: 'GM-CIT-10001',
       serviceCode: 'ADDRESS_CHANGE',
       purpose: 'Unified residence address update across state registries',
       consentId: 'CONSENT-00124',
       targetDepartments: ['REVENUE', 'FOOD', 'RURAL_DEVELOPMENT'],
-      createdAt: now,
-      updatedAt: now,
-      status: 'PROCESSING',
-      progressPercent: 40,
-      completedDepartments: 1,
+      createdAt: createdUtc,
+      receivedAt: '2026-09-04T04:35:21.450Z',
+      sentAt: '2026-09-04T04:35:21.500Z',
+      acceptedAt: '2026-09-04T04:35:22.100Z',
+      completedAt: '2026-09-04T04:35:25.800Z',
+      updatedAt: '2026-09-04T04:35:25.800Z',
+      status: 'COMPLETED',
+      progressPercent: 100,
+      completedDepartments: 3,
       totalDepartments: 3,
       steps: [
         {
@@ -55,24 +83,45 @@ class OrchestratorService {
           departmentName: 'Revenue & Forest Department',
           protocol: 'REST/JSON',
           status: 'SUCCESS',
-          timestamp: '10:05 AM',
-          remarks: 'Address verified and updated on Revenue Land Records registry.'
+          timestamp: '2026-09-04T04:35:21.450Z',
+          remarks: 'Address record successfully verified and updated on Revenue Land Registry.',
+          requestHash: reqHash,
+          hashStatus: 'VERIFIED',
+          documentHash: docHash,
+          receivedAt: '2026-09-04T04:35:21.450Z',
+          acceptedAt: '2026-09-04T04:35:22.100Z',
+          completedAt: '2026-09-04T04:35:23.200Z',
+          acknowledgementId: 'ACK-REV-000124'
         },
         {
           departmentCode: 'FOOD',
           departmentName: 'Food, Civil Supplies & Consumer Protection',
           protocol: 'SOAP/XML',
-          status: 'PROCESSING',
-          timestamp: '10:06 AM',
-          remarks: 'Routing verified address payload to Food Department SOAP endpoint...'
+          status: 'SUCCESS',
+          timestamp: '2026-09-04T04:35:21.450Z',
+          remarks: 'Ration card & PDS family quota records successfully synchronized via SOAP transformation.',
+          requestHash: reqHash,
+          hashStatus: 'VERIFIED',
+          documentHash: docHash,
+          receivedAt: '2026-09-04T04:35:21.450Z',
+          acceptedAt: '2026-09-04T04:35:22.200Z',
+          completedAt: '2026-09-04T04:35:24.500Z',
+          acknowledgementId: 'ACK-FOOD-000124'
         },
         {
           departmentCode: 'RURAL_DEVELOPMENT',
           departmentName: 'Rural Development & Panchayat Raj',
           protocol: 'CSV/SFTP',
-          status: 'PENDING',
-          timestamp: '10:06 AM',
-          remarks: 'Awaiting upstream department verification before dispatching local panchayat update.'
+          status: 'SUCCESS',
+          timestamp: '2026-09-04T04:35:21.450Z',
+          remarks: 'Local Gram Panchayat voter & resident registry synchronized with verified address.',
+          requestHash: reqHash,
+          hashStatus: 'VERIFIED',
+          documentHash: docHash,
+          receivedAt: '2026-09-04T04:35:21.450Z',
+          acceptedAt: '2026-09-04T04:35:22.300Z',
+          completedAt: '2026-09-04T04:35:25.800Z',
+          acknowledgementId: 'ACK-RURAL-000124'
         }
       ],
       citizen: {
@@ -87,10 +136,14 @@ class OrchestratorService {
           pincode: '411005'
         }
       },
+      documents: defaultDocs,
       auditTrail: [
         'TRANSACTION_CREATED: Initiated by citizen Aarav Sharma',
+        'CANONICAL_HASH_GENERATED: sha256:7f83b165...',
         'CONSENT_VERIFIED: Revenue, Food, and Rural data scopes approved',
-        'REVENUE_SUCCESS: Revenue Department verified address proof'
+        'REVENUE_SUCCESS: Revenue Department verified address proof',
+        'FOOD_SUCCESS: Ration card updated via SOAP',
+        'RURAL_SUCCESS: Gram Panchayat updated via CSV'
       ]
     });
   }
@@ -98,7 +151,8 @@ class OrchestratorService {
   public async processTransaction(request: CanonicalAddressChangeRequest): Promise<CanonicalTransactionResponse> {
     const appId = request.applicationId || `GM-2026-${Math.floor(100000 + Math.random() * 900000)}`;
     const corrId = request.correlationId || `CORR-26-${Math.floor(1000 + Math.random() * 9000)}`;
-    const now = new Date().toISOString();
+    const nowUtc = new Date().toISOString();
+    const reqVersion = request.requestVersion || 1;
 
     // Idempotency check: If transaction already completed successfully, return cached result
     const existing = this.transactions.get(appId);
@@ -107,6 +161,9 @@ class OrchestratorService {
         success: true,
         applicationId: existing.applicationId,
         correlationId: existing.correlationId,
+        requestVersion: existing.requestVersion,
+        canonicalRequestHash: existing.canonicalRequestHash,
+        documentHash: existing.documentHash,
         status: existing.status,
         progressPercent: existing.progressPercent,
         completedDepartments: existing.completedDepartments,
@@ -121,7 +178,19 @@ class OrchestratorService {
     const targetDepartments = serviceRegistry.resolveTargetDepartments(serviceCode, request.targetDepartments);
     const serviceDef = serviceRegistry.getService(serviceCode);
 
-    // 2. Initialize Transaction Record
+    // 2. Cryptographic Canonical & Document Hash Calculation
+    request.applicationId = appId;
+    request.correlationId = corrId;
+    request.createdAt = nowUtc;
+    request.requestVersion = reqVersion;
+
+    const canonicalHash = request.canonicalRequestHash || cryptoService.computeCanonicalRequestHash(request);
+    const docHash = request.documentHash || (request.documents && request.documents[0]?.checksum) || 'sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+
+    request.canonicalRequestHash = canonicalHash;
+    request.documentHash = docHash;
+
+    // 3. Initialize Transaction Record
     const initialSteps: DepartmentStepResult[] = targetDepartments.map(code => {
       const deptEntry = serviceRegistry.getDepartment(code);
       return {
@@ -129,21 +198,28 @@ class OrchestratorService {
         departmentName: deptEntry?.departmentName || code,
         protocol: deptEntry?.protocol || 'REST/JSON',
         status: 'PENDING',
-        timestamp: 'Pending',
-        remarks: `Queued for ${deptEntry?.departmentName || code} processing.`
+        timestamp: nowUtc,
+        remarks: `Queued for ${deptEntry?.departmentName || code} processing.`,
+        requestHash: canonicalHash,
+        hashStatus: 'VERIFIED',
+        documentHash: docHash
       };
     });
 
     const tx: TransactionRecord = {
       applicationId: appId,
       correlationId: corrId,
+      requestVersion: reqVersion,
+      canonicalRequestHash: canonicalHash,
+      documentHash: docHash,
       citizenId: request.citizenId || 'GM-CIT-10001',
       serviceCode,
       purpose: request.purpose || serviceDef?.description || 'Multi-department service coordination',
       consentId: request.consentId || `CONSENT-${Math.floor(10000 + Math.random() * 90000)}`,
       targetDepartments,
-      createdAt: now,
-      updatedAt: now,
+      createdAt: nowUtc,
+      receivedAt: nowUtc,
+      updatedAt: nowUtc,
       status: 'SUBMITTED',
       progressPercent: 10,
       completedDepartments: 0,
@@ -162,10 +238,19 @@ class OrchestratorService {
       event: 'TRANSACTION_CREATED',
       actor: 'GovMesh Core Ingress',
       result: 'SUCCESS',
-      details: `Initialized transaction ${appId} for service [${serviceCode}] with ${targetDepartments.length} target department(s): ${targetDepartments.join(', ')}`
+      details: `Initialized transaction ${appId} (v${reqVersion}) for service [${serviceCode}] with ${targetDepartments.length} target department(s): ${targetDepartments.join(', ')}`
     });
 
-    // 3. Department-Level Consent Verification & Data Minimization Gatekeeper
+    auditService.log({
+      correlationId: corrId,
+      applicationId: appId,
+      event: 'CANONICAL_HASH_GENERATED',
+      actor: 'GovMesh Cryptographic Service',
+      result: 'SUCCESS',
+      details: `Generated canonical request hash: ${canonicalHash} | Document hash: ${docHash}`
+    });
+
+    // 4. Department-Level Consent Verification & Data Minimization Gatekeeper
     let hasAnyConsent = false;
     const consents = request.consents || {};
 
@@ -209,6 +294,9 @@ class OrchestratorService {
         success: false,
         applicationId: appId,
         correlationId: corrId,
+        requestVersion: reqVersion,
+        canonicalRequestHash: canonicalHash,
+        documentHash: docHash,
         status: 'ACTION_REQUIRED',
         progressPercent: tx.progressPercent,
         completedDepartments: 0,
@@ -218,8 +306,9 @@ class OrchestratorService {
       };
     }
 
-    // 4. Dynamic Execution & Routing
+    // 5. Dynamic Execution & Routing
     tx.status = 'ROUTING';
+    tx.sentAt = new Date().toISOString();
     this.transactions.set(appId, tx);
 
     auditService.log({
@@ -234,7 +323,7 @@ class OrchestratorService {
     const executionMode = serviceDef?.executionMode || 'PARALLEL_FAN_OUT';
 
     if (executionMode === 'SEQUENTIAL_VERIFIED' && targetDepartments.includes('REVENUE')) {
-      // Step 4A: Execute Revenue scrutiny first if present
+      // Step 5A: Execute Revenue scrutiny first if present
       const revIndex = tx.steps.findIndex(s => s.departmentCode === 'REVENUE');
       if (revIndex >= 0 && tx.steps[revIndex].status !== 'CONSENT_BLOCKED') {
         tx.steps[revIndex].status = 'PROCESSING';
@@ -244,7 +333,7 @@ class OrchestratorService {
         const revAdapter = this.adapters.get('REVENUE');
         const revResult = revAdapter
           ? await revAdapter.process(request)
-          : { departmentCode: 'REVENUE', departmentName: 'Revenue & Forest Department', protocol: 'REST/JSON' as const, status: 'FAILED' as const, timestamp: new Date().toLocaleTimeString(), remarks: 'Adapter not found' };
+          : { departmentCode: 'REVENUE', departmentName: 'Revenue & Forest Department', protocol: 'REST/JSON' as const, status: 'FAILED' as const, timestamp: new Date().toISOString(), remarks: 'Adapter not found' };
 
         tx.steps[revIndex] = revResult;
 
@@ -256,6 +345,9 @@ class OrchestratorService {
             success: false,
             applicationId: appId,
             correlationId: corrId,
+            requestVersion: reqVersion,
+            canonicalRequestHash: canonicalHash,
+            documentHash: docHash,
             status: 'ACTION_REQUIRED',
             progressPercent: tx.progressPercent,
             completedDepartments: 0,
@@ -273,7 +365,7 @@ class OrchestratorService {
         }
       }
 
-      // Step 4B: Fan out to all other remaining departments in parallel
+      // Step 5B: Fan out to all other remaining departments in parallel
       const remainingIndices = tx.steps
         .map((s, idx) => ({ idx, code: s.departmentCode, status: s.status }))
         .filter(item => item.code !== 'REVENUE' && item.status !== 'CONSENT_BLOCKED');
@@ -294,14 +386,14 @@ class OrchestratorService {
               departmentName: tx.steps[idx].departmentName,
               protocol: tx.steps[idx].protocol,
               status: 'FAILED',
-              timestamp: new Date().toLocaleTimeString(),
+              timestamp: new Date().toISOString(),
               remarks: `No adapter registered for department code [${code}]`
             };
           }
         })
       );
     } else {
-      // Step 4C: Full Parallel Fan-out for all target departments
+      // Step 5C: Full Parallel Fan-out for all target departments
       const actionableIndices = tx.steps
         .map((s, idx) => ({ idx, code: s.departmentCode, status: s.status }))
         .filter(item => item.status !== 'CONSENT_BLOCKED');
@@ -322,7 +414,7 @@ class OrchestratorService {
               departmentName: tx.steps[idx].departmentName,
               protocol: tx.steps[idx].protocol,
               status: 'FAILED',
-              timestamp: new Date().toLocaleTimeString(),
+              timestamp: new Date().toISOString(),
               remarks: `No adapter registered for department code [${code}]`
             };
           }
@@ -330,7 +422,7 @@ class OrchestratorService {
       );
     }
 
-    // 5. Response Aggregation Engine
+    // 6. Response Aggregation Engine & Interoperability Evidence Sync
     const finalStatus = this.aggregateTransactionState(tx);
     this.transactions.set(appId, tx);
 
@@ -338,6 +430,9 @@ class OrchestratorService {
       success: finalStatus === 'COMPLETED' || finalStatus === 'PARTIALLY_COMPLETED',
       applicationId: appId,
       correlationId: corrId,
+      requestVersion: reqVersion,
+      canonicalRequestHash: canonicalHash,
+      documentHash: docHash,
       status: finalStatus,
       progressPercent: tx.progressPercent,
       completedDepartments: tx.completedDepartments,
@@ -371,13 +466,14 @@ class OrchestratorService {
     } else if (completed === activeTotal) {
       tx.status = 'COMPLETED';
       tx.progressPercent = 100;
+      tx.completedAt = new Date().toISOString();
       auditService.log({
         correlationId: tx.correlationId,
         applicationId: tx.applicationId,
         event: 'TRANSACTION_COMPLETED',
         actor: 'GovMesh Response Aggregator',
         result: 'SUCCESS',
-        details: `All ${completed} target department(s) synchronized successfully.`
+        details: `All ${completed} target department(s) synchronized and verified with canonical request hash ${tx.canonicalRequestHash.slice(0, 16)}...`
       });
     } else if (completed > 0 && failed > 0) {
       tx.status = 'PARTIALLY_COMPLETED';
@@ -408,7 +504,7 @@ class OrchestratorService {
 
   private generateStatusMessage(tx: TransactionRecord): string {
     if (tx.status === 'COMPLETED') {
-      return `Transaction completed successfully across ${tx.completedDepartments} department registries.`;
+      return `Transaction completed successfully across ${tx.completedDepartments} department registries. Canonical hash: ${tx.canonicalRequestHash.slice(0, 16)}...`;
     }
     if (tx.status === 'PARTIALLY_COMPLETED') {
       return `Transaction partially completed: ${tx.completedDepartments} of ${tx.totalDepartments} departments synchronized. Operational retry available for remaining departments.`;
@@ -432,14 +528,13 @@ class OrchestratorService {
     );
   }
 
-  // 6. Selective Idempotent Retry
+  // 7. Selective Idempotent Retry
   public async retryTransaction(applicationId: string): Promise<CanonicalTransactionResponse> {
     const tx = this.transactions.get(applicationId);
     if (!tx) {
       throw new Error(`Transaction '${applicationId}' not found in registry.`);
     }
 
-    // Find only the failed or un-synced department steps
     const retrySteps = tx.steps
       .map((s, idx) => ({ idx, step: s }))
       .filter(({ step }) => step.status !== 'SUCCESS' && step.status !== 'CONSENT_BLOCKED');
@@ -449,6 +544,9 @@ class OrchestratorService {
         success: true,
         applicationId: tx.applicationId,
         correlationId: tx.correlationId,
+        requestVersion: tx.requestVersion,
+        canonicalRequestHash: tx.canonicalRequestHash,
+        documentHash: tx.documentHash,
         status: tx.status,
         progressPercent: tx.progressPercent,
         completedDepartments: tx.completedDepartments,
@@ -458,27 +556,33 @@ class OrchestratorService {
       };
     }
 
+    tx.requestVersion = (tx.requestVersion || 1) + 1;
+    tx.updatedAt = new Date().toISOString();
+
     auditService.log({
       correlationId: tx.correlationId,
       applicationId: tx.applicationId,
       event: 'RETRY_STARTED',
       actor: 'GovMesh Selective Retry Coordinator',
       result: 'PENDING',
-      details: `Initiating selective retry for ${retrySteps.length} failed department(s): ${retrySteps.map(r => r.step.departmentCode).join(', ')}`
+      details: `Initiating selective retry (v${tx.requestVersion}) for ${retrySteps.length} failed department(s): ${retrySteps.map(r => r.step.departmentCode).join(', ')}`
     });
 
     const canonicalRequest: CanonicalAddressChangeRequest = {
       applicationId: tx.applicationId,
       citizenId: tx.citizenId,
       correlationId: tx.correlationId,
+      requestVersion: tx.requestVersion,
+      canonicalRequestHash: tx.canonicalRequestHash,
+      documentHash: tx.documentHash,
       serviceCode: tx.serviceCode,
       purpose: tx.purpose,
       consentId: tx.consentId,
+      createdAt: tx.createdAt,
       citizen: tx.citizen,
       documents: tx.documents
     };
 
-    // Re-dispatch ONLY to failed department adapters
     await Promise.allSettled(
       retrySteps.map(async ({ idx, step }) => {
         tx.steps[idx].status = 'RETRYING';
@@ -509,6 +613,9 @@ class OrchestratorService {
       success: finalStatus === 'COMPLETED' || finalStatus === 'PARTIALLY_COMPLETED',
       applicationId: tx.applicationId,
       correlationId: tx.correlationId,
+      requestVersion: tx.requestVersion,
+      canonicalRequestHash: tx.canonicalRequestHash,
+      documentHash: tx.documentHash,
       status: finalStatus,
       progressPercent: tx.progressPercent,
       completedDepartments: tx.completedDepartments,

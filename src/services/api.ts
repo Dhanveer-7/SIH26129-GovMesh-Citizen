@@ -1,4 +1,4 @@
-import { CitizenProfile, Application, ConsentRecord, Notification, DataSharingLog } from '../types';
+import { CitizenProfile, Application, ConsentRecord, Notification, DataSharingLog, InteroperabilityEvidence, DepartmentReceivedRequest, DocumentEvidenceRecord } from '../types';
 import { mockServices } from '../mock/data';
 
 // Read backend URL from environment variables
@@ -6,6 +6,11 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 const IS_MOCK_MODE = !API_BASE_URL;
 
 console.log(`[GovMesh Service Init] Mode: ${IS_MOCK_MODE ? 'SANDBOX_MOCK' : 'LIVE_BACKEND'}, Base URL: ${API_BASE_URL || 'N/A'}`);
+
+function getCoreBaseUrl(): string {
+  const configuredUrl = import.meta.env.VITE_GOVMESH_CORE_URL || import.meta.env.VITE_API_BASE_URL;
+  return configuredUrl ? configuredUrl.replace(/\/+$/, '') : (import.meta.env.DEV ? 'http://localhost:5000' : window.location.origin);
+}
 
 // Helper to make fetch requests to the real API
 async function apiRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -29,6 +34,7 @@ export const api = {
   // Check modes
   isMock: () => IS_MOCK_MODE,
   getBaseUrl: () => API_BASE_URL,
+  getCoreUrl: () => getCoreBaseUrl(),
 
   // Authentication API
   login: async (mobile: string): Promise<{ success: boolean; otpSent: boolean }> => {
@@ -91,7 +97,6 @@ export const api = {
   // Applications & Tracking API
   getApplications: async (): Promise<Application[]> => {
     if (IS_MOCK_MODE) {
-      // In mock mode, DemoContext controls these directly from LocalStorage
       return [];
     }
     return apiRequest<Application[]>('/applications');
@@ -155,10 +160,9 @@ export const api = {
     consentId?: string;
     consents?: { revenue: boolean; food: boolean; rural: boolean; [key: string]: boolean | undefined };
     citizen?: { name?: string; address?: { line1?: string; district?: string; state?: string } };
+    documents?: any[];
   }) => {
-    const configuredUrl = import.meta.env.VITE_GOVMESH_CORE_URL || import.meta.env.VITE_API_BASE_URL;
-    const coreUrl = configuredUrl ? configuredUrl.replace(/\/+$/, '') : (import.meta.env.DEV ? 'http://localhost:5000' : window.location.origin);
-    
+    const coreUrl = getCoreBaseUrl();
     const res = await fetch(`${coreUrl}/api/govmesh/transactions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -168,17 +172,13 @@ export const api = {
   },
 
   getGovMeshTransactionStatus: async (applicationId: string) => {
-    const configuredUrl = import.meta.env.VITE_GOVMESH_CORE_URL || import.meta.env.VITE_API_BASE_URL;
-    const coreUrl = configuredUrl ? configuredUrl.replace(/\/+$/, '') : (import.meta.env.DEV ? 'http://localhost:5000' : window.location.origin);
-    
+    const coreUrl = getCoreBaseUrl();
     const res = await fetch(`${coreUrl}/api/govmesh/transactions/${applicationId}`);
     return res.json();
   },
 
   retryGovMeshTransaction: async (applicationId: string) => {
-    const configuredUrl = import.meta.env.VITE_GOVMESH_CORE_URL || import.meta.env.VITE_API_BASE_URL;
-    const coreUrl = configuredUrl ? configuredUrl.replace(/\/+$/, '') : (import.meta.env.DEV ? 'http://localhost:5000' : window.location.origin);
-    
+    const coreUrl = getCoreBaseUrl();
     const res = await fetch(`${coreUrl}/api/govmesh/transactions/${applicationId}/retry`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
@@ -187,18 +187,33 @@ export const api = {
   },
 
   getGovMeshServices: async () => {
-    const configuredUrl = import.meta.env.VITE_GOVMESH_CORE_URL || import.meta.env.VITE_API_BASE_URL;
-    const coreUrl = configuredUrl ? configuredUrl.replace(/\/+$/, '') : (import.meta.env.DEV ? 'http://localhost:5000' : window.location.origin);
-    
+    const coreUrl = getCoreBaseUrl();
     const res = await fetch(`${coreUrl}/api/govmesh/services`);
     return res.json();
   },
 
   getGovMeshAudit: async (applicationId: string) => {
-    const configuredUrl = import.meta.env.VITE_GOVMESH_CORE_URL || import.meta.env.VITE_API_BASE_URL;
-    const coreUrl = configuredUrl ? configuredUrl.replace(/\/+$/, '') : (import.meta.env.DEV ? 'http://localhost:5000' : window.location.origin);
-    
+    const coreUrl = getCoreBaseUrl();
     const res = await fetch(`${coreUrl}/api/govmesh/audit/${applicationId}`);
+    return res.json();
+  },
+
+  // End-to-End Interoperability Evidence & Traceability
+  getGovMeshEvidence: async (applicationId: string): Promise<{ success: boolean; evidence: InteroperabilityEvidence }> => {
+    const coreUrl = getCoreBaseUrl();
+    const res = await fetch(`${coreUrl}/api/govmesh/evidence/${applicationId}`);
+    return res.json();
+  },
+
+  getDepartmentReceivedRequest: async (applicationId: string, departmentCode: string): Promise<{ success: boolean; receivedRequest: DepartmentReceivedRequest }> => {
+    const coreUrl = getCoreBaseUrl();
+    const res = await fetch(`${coreUrl}/api/govmesh/evidence/${applicationId}/department/${departmentCode}`);
+    return res.json();
+  },
+
+  getDocumentEvidence: async (applicationId: string, documentId: string): Promise<{ success: boolean; document: DocumentEvidenceRecord }> => {
+    const coreUrl = getCoreBaseUrl();
+    const res = await fetch(`${coreUrl}/api/govmesh/evidence/${applicationId}/documents/${documentId}`);
     return res.json();
   }
 };
