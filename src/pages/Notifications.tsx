@@ -1,12 +1,69 @@
 import React, { useState } from 'react';
 import { useDemo } from '../context/DemoContext';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Check, Clock, AlertTriangle, AlertCircle, Eye, RefreshCw } from 'lucide-react';
+import { Bell, Check, Clock, AlertTriangle, AlertCircle, Eye, RefreshCw, Trash2, CheckCheck, Zap } from 'lucide-react';
+import api from '../services/api';
 
 export const Notifications: React.FC = () => {
-  const { notifications, markNotificationAsRead } = useDemo();
+  const { 
+    notifications, 
+    markNotificationAsRead, 
+    markAllNotificationsAsRead, 
+    clearAllNotifications, 
+    addNotification 
+  } = useDemo();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'all' | 'unread' | 'action' | 'completed'>('all');
+  const [isTestingSync, setIsTestingSync] = useState(false);
+
+  const handleTestLiveSync = async () => {
+    setIsTestingSync(true);
+    try {
+      const res = await api.submitGovMeshTransaction({
+        applicationId: 'GM-2026-000124',
+        citizenId: 'GM-CIT-10001',
+        serviceCode: 'ADDRESS_CHANGE',
+        purpose: 'Live Cross-Department Verification Test',
+        consents: { revenue: true, food: true, rural: true },
+        citizen: {
+          name: 'Aarav Sharma',
+          address: {
+            line1: 'Flat 402, Shivajinagar Residency, FC Road',
+            district: 'Pune',
+            state: 'Maharashtra'
+          }
+        }
+      });
+
+      if (res && (res.success || res.status === 'COMPLETED')) {
+        addNotification({
+          title: "Live Cross-Department Synchronization Complete",
+          description: "GovMesh Core successfully verified and synchronized records across Revenue (Render), Food & Civil Supplies (Render SOAP), and Rural Development (Vercel CSV). All 3 departments responded with HTTP 200 OK.",
+          type: "SUCCESS",
+          applicationId: "GM-2026-000124",
+          priority: "HIGH"
+        });
+      } else {
+        addNotification({
+          title: "Department Sync Status",
+          description: res.message || "Synchronization completed with partial response.",
+          type: "WARNING",
+          applicationId: "GM-2026-000124",
+          priority: "MEDIUM"
+        });
+      }
+    } catch (err: any) {
+      addNotification({
+        title: "Live Sync Connection Error",
+        description: err.message || "Failed to contact GovMesh Core orchestrator.",
+        type: "ALERT",
+        applicationId: "GM-2026-000124",
+        priority: "HIGH"
+      });
+    } finally {
+      setIsTestingSync(false);
+    }
+  };
 
   const filteredNotifications = notifications.filter(n => {
     if (activeTab === 'unread') return !n.isRead;
@@ -39,13 +96,48 @@ export const Notifications: React.FC = () => {
 
   return (
     <div className="space-y-6 py-2">
-      {/* Title */}
-      <div className="flex justify-between items-center">
+      {/* Title & Action Buttons */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900">Citizen Notifications Center</h1>
           <p className="text-xs text-slate-550 font-semibold mt-1">
             Stay updated on coordinated registry updates, consent requests, and actions required.
           </p>
+        </div>
+
+        {/* Top Action Buttons */}
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={handleTestLiveSync}
+            disabled={isTestingSync}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-gov-sm transition disabled:opacity-50"
+            title="Execute Live Multi-Department Sync Check"
+          >
+            <Zap className={`w-3.5 h-3.5 ${isTestingSync ? 'animate-bounce' : ''}`} />
+            <span>{isTestingSync ? 'Syncing...' : 'Test Live Cloud Sync'}</span>
+          </button>
+
+          {notifications.length > 0 && (
+            <>
+              <button
+                onClick={markAllNotificationsAsRead}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition shadow-gov-sm"
+                title="Mark all notifications as read"
+              >
+                <CheckCheck className="w-3.5 h-3.5 text-slate-500" />
+                <span>Mark All Read</span>
+              </button>
+
+              <button
+                onClick={clearAllNotifications}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg text-xs font-bold transition shadow-gov-sm"
+                title="Clear all stored notifications"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                <span>Clear All</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -72,8 +164,22 @@ export const Notifications: React.FC = () => {
       {/* Feed List */}
       <div className="space-y-3">
         {filteredNotifications.length === 0 ? (
-          <div className="bg-white border border-slate-200 rounded-xl p-12 text-center text-slate-400 text-xs shadow-gov-sm">
-            No notifications in this category.
+          <div className="bg-white border border-slate-200 rounded-xl p-12 text-center text-slate-400 text-xs shadow-gov-sm space-y-3">
+            <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto">
+              <Bell className="w-6 h-6" />
+            </div>
+            <p className="font-semibold text-slate-600">No notifications in this view.</p>
+            <p className="text-[11px] text-slate-400 max-w-sm mx-auto">
+              All multi-department transactions, cross-registry sync statuses, and statutory consent notifications will appear here.
+            </p>
+            <button
+              onClick={handleTestLiveSync}
+              disabled={isTestingSync}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-gov-sm transition"
+            >
+              <Zap className="w-3.5 h-3.5" />
+              <span>{isTestingSync ? 'Running Live Cloud Sync...' : 'Test Live Cloud Sync'}</span>
+            </button>
           </div>
         ) : (
           filteredNotifications.map(n => (

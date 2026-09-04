@@ -64,6 +64,8 @@ interface DemoContextType {
   resetDemo: () => void;
   addNotification: (notification: Omit<Notification, 'id' | 'timestamp' | 'isRead'>) => void;
   markNotificationAsRead: (id: string) => void;
+  markAllNotificationsAsRead: () => void;
+  clearAllNotifications: () => void;
   revokeConsent: (id: string) => void;
 }
 
@@ -197,6 +199,15 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const markNotificationAsRead = (id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+  };
+
+  const markAllNotificationsAsRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+  };
+
+  const clearAllNotifications = () => {
+    setNotifications([]);
+    localStorage.removeItem('govmesh_notifications');
   };
 
   const revokeConsent = (id: string) => {
@@ -644,6 +655,8 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       resetDemo,
       addNotification,
       markNotificationAsRead,
+      markAllNotificationsAsRead,
+      clearAllNotifications,
       revokeConsent
     }}>
       {children}
