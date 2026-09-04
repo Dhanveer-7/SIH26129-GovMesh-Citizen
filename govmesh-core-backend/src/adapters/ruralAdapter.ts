@@ -98,7 +98,8 @@ export class RuralAdapter implements DepartmentAdapter {
           'X-Correlation-ID': context.correlationId,
           'X-GovMesh-App-ID': context.applicationId,
           'X-GovMesh-Request-Hash': reqHash,
-          'X-GovMesh-Sent-At': sentAt
+          'X-GovMesh-Sent-At': sentAt,
+          'X-GovMesh-API-Key': process.env.GOVMESH_API_KEY || 'govmesh-live-secure-key-2026'
         },
         body: JSON.stringify(transformedPayload),
         signal: controller.signal
