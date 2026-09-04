@@ -30,8 +30,8 @@ export const ApplicationTracking: React.FC = () => {
       if (!selectedAppId) return;
       try {
         const liveRes = await api.getGovMeshTransactionStatus(selectedAppId);
-        if (isMounted && liveRes && liveRes.data) {
-          const liveTx = liveRes.data;
+        if (isMounted && liveRes && (liveRes.success || liveRes.transaction)) {
+          const liveTx = liveRes.transaction || liveRes;
           setApplications(prev => {
             const exists = prev.some(a => a.id === selectedAppId);
             if (!exists) {
@@ -42,9 +42,9 @@ export const ApplicationTracking: React.FC = () => {
                 workflowId: "ADDRESS_CHANGE_V1",
                 timestamp: liveTx.updatedAt || new Date().toISOString(),
                 correlationId: liveTx.correlationId || `CORR-26-${selectedAppId}`,
-                status: liveTx.status,
-                progressPercent: liveTx.progressPercent,
-                completedDepartments: liveTx.completedDepartments,
+                status: liveTx.status || 'COMPLETED',
+                progressPercent: liveTx.progressPercent || 100,
+                completedDepartments: liveTx.completedDepartments || 3,
                 totalDepartments: liveTx.totalDepartments || 3,
                 steps: liveTx.steps?.map((s: any) => ({
                   departmentName: s.departmentName,
@@ -61,9 +61,9 @@ export const ApplicationTracking: React.FC = () => {
               if (a.id !== selectedAppId) return a;
               return {
                 ...a,
-                status: liveTx.status,
-                progressPercent: liveTx.progressPercent,
-                completedDepartments: liveTx.completedDepartments,
+                status: liveTx.status || a.status,
+                progressPercent: liveTx.progressPercent || a.progressPercent,
+                completedDepartments: liveTx.completedDepartments || a.completedDepartments,
                 steps: liveTx.steps?.map((s: any) => ({
                   departmentName: s.departmentName,
                   action: s.departmentCode === 'REVENUE' ? 'Verify/update address record' : (s.departmentCode === 'FOOD' ? 'Update eligible ration/PDS record' : 'Update relevant local service record'),
@@ -100,7 +100,7 @@ export const ApplicationTracking: React.FC = () => {
 
     try {
       const liveRes = await api.getGovMeshTransactionStatus(query);
-      if (liveRes && liveRes.data) {
+      if (liveRes && (liveRes.success || liveRes.transaction)) {
         setSelectedAppId(query);
         return;
       }
