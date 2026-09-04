@@ -7,6 +7,9 @@ import { CanonicalAddressChangeRequest } from '../models/canonical.js';
 
 const router = express.Router();
 
+// Sanitizer helper to prevent path traversal and injection in route params
+const isValidIdentifier = (val: string): boolean => /^[a-zA-Z0-9_\-\.:]+$/.test(val);
+
 router.get(['/', '/health', '/api/health'], (req, res) => {
   res.json({
     status: 'ok',
@@ -67,6 +70,9 @@ router.post('/api/govmesh/transactions', async (req, res) => {
 
 router.get('/api/govmesh/transactions/:applicationId', (req, res) => {
   const { applicationId } = req.params;
+  if (!isValidIdentifier(applicationId)) {
+    return res.status(400).json({ success: false, message: 'Invalid applicationId format' });
+  }
   const tx = orchestratorService.getTransaction(applicationId);
 
   if (!tx) {
@@ -104,6 +110,9 @@ router.get('/api/govmesh/transactions', (req, res) => {
 
 router.post('/api/govmesh/transactions/:applicationId/retry', async (req, res) => {
   const { applicationId } = req.params;
+  if (!isValidIdentifier(applicationId)) {
+    return res.status(400).json({ success: false, message: 'Invalid applicationId format' });
+  }
   try {
     const result = await orchestratorService.retryTransaction(applicationId);
     res.json(result);
@@ -119,6 +128,9 @@ router.post('/api/govmesh/transactions/:applicationId/retry', async (req, res) =
 
 router.get('/api/govmesh/evidence/:applicationId', (req, res) => {
   const { applicationId } = req.params;
+  if (!isValidIdentifier(applicationId)) {
+    return res.status(400).json({ success: false, message: 'Invalid applicationId format' });
+  }
   const tx = orchestratorService.getTransaction(applicationId);
   const evidence = evidenceService.getInteroperabilityEvidence(applicationId, tx);
 
@@ -138,6 +150,9 @@ router.get('/api/govmesh/evidence/:applicationId', (req, res) => {
 
 router.get('/api/govmesh/evidence/:applicationId/department/:departmentCode', (req, res) => {
   const { applicationId, departmentCode } = req.params;
+  if (!isValidIdentifier(applicationId) || !isValidIdentifier(departmentCode)) {
+    return res.status(400).json({ success: false, message: 'Invalid identifier format' });
+  }
   const deptReq = evidenceService.getDepartmentReceivedRequest(applicationId, departmentCode.toUpperCase());
 
   if (!deptReq) {
@@ -157,6 +172,9 @@ router.get('/api/govmesh/evidence/:applicationId/department/:departmentCode', (r
 
 router.get('/api/govmesh/evidence/:applicationId/documents/:documentId', (req, res) => {
   const { applicationId, documentId } = req.params;
+  if (!isValidIdentifier(applicationId) || !isValidIdentifier(documentId)) {
+    return res.status(400).json({ success: false, message: 'Invalid identifier format' });
+  }
   const doc = evidenceService.getDocument(applicationId, documentId);
 
   if (!doc) {
@@ -175,6 +193,9 @@ router.get('/api/govmesh/evidence/:applicationId/documents/:documentId', (req, r
 
 router.get('/api/govmesh/audit/:applicationId', (req, res) => {
   const { applicationId } = req.params;
+  if (!isValidIdentifier(applicationId)) {
+    return res.status(400).json({ success: false, message: 'Invalid applicationId format' });
+  }
   const logs = auditService.getLogsByApplicationId(applicationId);
   res.json({
     success: true,
@@ -185,7 +206,7 @@ router.get('/api/govmesh/audit/:applicationId', (req, res) => {
 });
 
 router.get('/api/govmesh/audit', (req, res) => {
-  const limit = parseInt(req.query.limit as string || '50', 10);
+  const limit = Math.min(Math.max(parseInt(req.query.limit as string || '50', 10) || 50, 1), 500);
   const logs = auditService.getAllLogs(limit);
   res.json({
     success: true,
