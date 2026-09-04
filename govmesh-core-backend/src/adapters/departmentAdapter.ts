@@ -1,4 +1,4 @@
-﻿import { CanonicalAddressChangeRequest, DepartmentCode, DepartmentStepResult } from '../models/canonical.js';
+import { CanonicalAddressChangeRequest, DepartmentCode, DepartmentStepResult, ProofDocument } from '../models/canonical.js';
 
 export interface AdapterRequestContext {
   applicationId: string;
@@ -7,6 +7,11 @@ export interface AdapterRequestContext {
   serviceCode: string;
   consentId: string;
   timestamp: string;
+  requestVersion?: number;
+  canonicalRequestHash?: string;
+  documentHash?: string;
+  createdAt?: string;
+  documents?: ProofDocument[];
 }
 
 export interface DepartmentAdapter {

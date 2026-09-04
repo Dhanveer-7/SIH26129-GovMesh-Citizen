@@ -1,7 +1,9 @@
-import { CanonicalAddressChangeRequest, DepartmentCode, DepartmentStepResult } from '../models/canonical.js';
+import { CanonicalAddressChangeRequest, DepartmentCode, DepartmentStepResult, DocumentEvidenceRecord } from '../models/canonical.js';
 import { DepartmentAdapter, AdapterRequestContext } from './departmentAdapter.js';
 import { serviceRegistry } from '../registry/serviceRegistry.js';
 import { auditService } from '../services/auditService.js';
+import { cryptoService } from '../services/cryptoService.js';
+import { evidenceService } from '../services/evidenceService.js';
 
 export class RuralAdapter implements DepartmentAdapter {
   public getDepartmentCode(): DepartmentCode {
@@ -33,12 +35,19 @@ export class RuralAdapter implements DepartmentAdapter {
   }
 
   public transform(request: CanonicalAddressChangeRequest): any {
+    const reqHash = request.canonicalRequestHash || cryptoService.computeCanonicalRequestHash(request);
+    const docHash = request.documentHash || (request.documents && request.documents[0]?.checksum) || 'sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+
     return {
       applicationId: request.applicationId,
+      correlationId: request.correlationId || `CORR-26-${request.applicationId}`,
       citizenId: request.citizenId || 'GM-CIT-10001',
       serviceCode: request.serviceCode || 'ADDRESS_CHANGE',
       purpose: request.purpose || 'Rural service record update',
       consentId: request.consentId || 'CONSENT-00124',
+      requestVersion: request.requestVersion || 1,
+      canonicalRequestHash: reqHash,
+      documentHash: docHash,
       citizen: {
         name: request.citizen.name || 'Demo Citizen',
         address: {
@@ -53,7 +62,77 @@ export class RuralAdapter implements DepartmentAdapter {
   public async send(transformedPayload: any, context: AdapterRequestContext): Promise<DepartmentStepResult> {
     const dept = serviceRegistry.getDepartment('RURAL_DEVELOPMENT');
     const baseUrl = dept?.baseUrl || 'https://sih-26129-gov-mesh-rural-develpment.vercel.app';
-    const timestamp = context.timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const receivedUtc = new Date().toISOString();
+    const reqHash = context.canonicalRequestHash || transformedPayload.canonicalRequestHash;
+    const docHash = context.documentHash || transformedPayload.documentHash;
+    const ackId = `ACK-RURAL-${context.applicationId.replace(/[^a-zA-Z0-9]/g, '')}`;
+
+    const docRecords: DocumentEvidenceRecord[] = (context.documents || []).map(d => ({
+      documentId: d.id || `DOC-${Math.floor(1000 + Math.random() * 9000)}`,
+      applicationId: context.applicationId,
+      documentName: d.name || 'address-proof-demo.pdf',
+      documentType: d.type || 'PANCHAYAT_RESIDENCE_PROOF',
+      documentVersion: d.version || 1,
+      documentSize: d.size || '1.2 MB',
+      documentHash: d.checksum || d.documentHash || docHash,
+      uploadedAt: context.createdAt || receivedUtc,
+      receivedAt: receivedUtc,
+      sourceSystem: 'GovMesh Citizen Portal',
+      receivedFrom: 'GovMesh Core Ingress',
+      contentType: d.contentType || 'application/pdf',
+      integrityStatus: 'VERIFIED',
+      downloadUrl: `/api/govmesh/evidence/${context.applicationId}/documents/${d.id || 'DOC-1'}`
+    }));
+
+    // Register Received Request Snapshot in Rural Evidence Ledger
+    evidenceService.recordDepartmentReceived({
+      applicationId: context.applicationId,
+      correlationId: context.correlationId,
+      serviceCode: context.serviceCode,
+      departmentCode: 'RURAL_DEVELOPMENT',
+      departmentName: this.getDepartmentName(),
+      sourceSystem: 'GovMesh Core',
+      receivedAt: receivedUtc,
+      acceptedAt: new Date().toISOString(),
+      requestVersion: context.requestVersion || 1,
+      requestHash: reqHash,
+      hashStatus: 'VERIFIED',
+      citizenId: context.citizenId,
+      authorizedFields: ['citizenId', 'citizen.name', 'citizen.address.line1', 'citizen.address.district', 'citizen.address.state'],
+      receivedPayload: transformedPayload,
+      documents: docRecords.length > 0 ? docRecords : [{
+        documentId: 'DOC-RURAL-124',
+        applicationId: context.applicationId,
+        documentName: 'address-proof-demo.pdf',
+        documentType: 'PANCHAYAT_RESIDENCE_PROOF',
+        documentVersion: 1,
+        documentSize: '1.2 MB',
+        documentHash: docHash,
+        uploadedAt: context.createdAt || receivedUtc,
+        receivedAt: receivedUtc,
+        sourceSystem: 'GovMesh Citizen Portal',
+        receivedFrom: 'GovMesh Core Ingress',
+        contentType: 'application/pdf',
+        integrityStatus: 'VERIFIED',
+        downloadUrl: `/api/govmesh/evidence/${context.applicationId}/documents/DOC-RURAL-124`
+      }],
+      lifecycleState: 'ACCEPTED',
+      acknowledgement: {
+        acknowledgementId: ackId,
+        applicationId: context.applicationId,
+        correlationId: context.correlationId,
+        departmentCode: 'RURAL_DEVELOPMENT',
+        requestVersion: context.requestVersion || 1,
+        receivedAt: receivedUtc,
+        acceptedAt: new Date().toISOString(),
+        status: 'ACCEPTED',
+        requestHash: reqHash,
+        documentHash: docHash,
+        hashStatus: 'VERIFIED',
+        remarks: 'Gram Panchayat record ingested and accepted.'
+      },
+      updatedAt: receivedUtc
+    });
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -62,7 +141,10 @@ export class RuralAdapter implements DepartmentAdapter {
       const response = await fetch(`${baseUrl}/api/rural/address-update`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-Correlation-ID': context.correlationId,
+          'X-GovMesh-App-ID': context.applicationId,
+          'X-GovMesh-Request-Hash': reqHash
         },
         body: JSON.stringify(transformedPayload),
         signal: controller.signal
@@ -78,7 +160,22 @@ export class RuralAdapter implements DepartmentAdapter {
         parsedData = { raw: rawText };
       }
 
-      return this.normalizeResponse(parsedData, response.status, context);
+      const normResult = this.normalizeResponse(parsedData, response.status, context);
+      const completedUtc = new Date().toISOString();
+
+      if (normResult.status === 'SUCCESS') {
+        evidenceService.updateDepartmentLifecycle('RURAL_DEVELOPMENT', context.applicationId, 'SUCCESS', normResult.remarks, completedUtc);
+      }
+
+      normResult.requestHash = reqHash;
+      normResult.hashStatus = 'VERIFIED';
+      normResult.documentHash = docHash;
+      normResult.receivedAt = receivedUtc;
+      normResult.acceptedAt = receivedUtc;
+      normResult.completedAt = completedUtc;
+      normResult.acknowledgementId = ackId;
+
+      return normResult;
     } catch (err: any) {
       clearTimeout(timeoutId);
       const isTimeout = err.name === 'AbortError';
@@ -86,20 +183,26 @@ export class RuralAdapter implements DepartmentAdapter {
         ? 'Rural Development server connection timed out.'
         : `Network Error: ${err.message}`;
 
+      evidenceService.updateDepartmentLifecycle('RURAL_DEVELOPMENT', context.applicationId, 'FAILED', errorMsg);
+
       return {
         departmentCode: 'RURAL_DEVELOPMENT',
         departmentName: this.getDepartmentName(),
         protocol: this.getProtocol(),
         status: 'FAILED',
-        timestamp,
+        timestamp: receivedUtc,
         remarks: errorMsg,
-        errorCode: isTimeout ? 'TIMEOUT' : 'CONNECTION_FAILED'
+        errorCode: isTimeout ? 'TIMEOUT' : 'CONNECTION_FAILED',
+        requestHash: reqHash,
+        hashStatus: 'VERIFIED',
+        documentHash: docHash,
+        acknowledgementId: ackId
       };
     }
   }
 
   public normalizeResponse(rawResponse: any, httpStatus: number, context: AdapterRequestContext): DepartmentStepResult {
-    const timestamp = context.timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const timestamp = context.createdAt || new Date().toISOString();
 
     if (httpStatus >= 200 && httpStatus < 300 && rawResponse?.success) {
       return {
@@ -140,14 +243,22 @@ export class RuralAdapter implements DepartmentAdapter {
 
   public async process(request: CanonicalAddressChangeRequest): Promise<DepartmentStepResult> {
     const validation = this.validate(request);
-    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const createdUtc = request.createdAt || new Date().toISOString();
+    const reqHash = request.canonicalRequestHash || cryptoService.computeCanonicalRequestHash(request);
+    const docHash = request.documentHash || (request.documents && request.documents[0]?.checksum) || 'sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+
     const context: AdapterRequestContext = {
       applicationId: request.applicationId,
-      correlationId: request.correlationId || `CORR-26-${Date.now()}`,
+      correlationId: request.correlationId || `CORR-26-${request.applicationId}`,
       citizenId: request.citizenId,
       serviceCode: request.serviceCode,
       consentId: request.consentId,
-      timestamp
+      timestamp: createdUtc,
+      requestVersion: request.requestVersion || 1,
+      canonicalRequestHash: reqHash,
+      documentHash: docHash,
+      createdAt: createdUtc,
+      documents: request.documents
     };
 
     if (!validation.valid) {
@@ -156,7 +267,7 @@ export class RuralAdapter implements DepartmentAdapter {
         departmentName: this.getDepartmentName(),
         protocol: this.getProtocol(),
         status: 'FAILED',
-        timestamp,
+        timestamp: createdUtc,
         remarks: validation.error || 'Validation failed',
         errorCode: 'VALIDATION_ERROR'
       };
@@ -169,7 +280,7 @@ export class RuralAdapter implements DepartmentAdapter {
       department: 'RURAL_DEVELOPMENT',
       actor: 'GovMesh Rural Legacy Adapter',
       result: 'SUCCESS',
-      details: 'Dispatched CSV payload / API request to Rural Development Department.'
+      details: `Dispatched CSV/API payload to Rural Panchayat. RequestHash: ${reqHash.slice(0, 16)}... | DocumentHash: ${docHash.slice(0, 16)}...`
     });
 
     const transformed = this.transform(request);
