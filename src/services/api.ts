@@ -84,7 +84,7 @@ export const api = {
     if (IS_MOCK_MODE) {
       return {
         success: true,
-        applicationId: 'GM-2026-000124',
+        applicationId: `GM-2026-${Math.floor(100000 + Math.random() * 900000)}`,
         workflowId: 'ADDRESS_CHANGE_V1'
       };
     }

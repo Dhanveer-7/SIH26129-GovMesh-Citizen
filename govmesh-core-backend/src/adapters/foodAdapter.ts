@@ -168,7 +168,7 @@ export class FoodAdapter implements DepartmentAdapter {
         authorizedFields: ['citizen.name', 'citizen.address.line', 'citizen.address.district', 'verification.status', 'consent.id'],
         receivedPayload: transformedPayload,
         documents: docRecords,
-        lifecycleState: 'SUCCESS',
+        lifecycleState: 'ACCEPTED',
         acknowledgement: {
           acknowledgementId: ackId,
           applicationId: context.applicationId,
@@ -178,13 +178,13 @@ export class FoodAdapter implements DepartmentAdapter {
           sentAt,
           receivedAt,
           acceptedAt,
-          completedAt,
+          completedAt: undefined,
           ackReceivedAt,
-          status: 'COMPLETED',
+          status: 'ACCEPTED',
           requestHash: reqHash,
           documentHash: docHash,
           hashStatus: 'VERIFIED',
-          remarks: 'Ration card & PDS family quota records synchronized via GovMesh Resilient SOAP Queue.',
+          remarks: 'Application delivered to Food Department queue. Awaiting officer scrutiny.',
           timestampIntegrity: timestampReport
         },
         updatedAt: ackReceivedAt,
@@ -195,24 +195,24 @@ export class FoodAdapter implements DepartmentAdapter {
         departmentCode: 'FOOD',
         departmentName: this.getDepartmentName(),
         protocol: this.getProtocol(),
-        status: 'SUCCESS',
+        status: 'PENDING',
         timestamp: receivedAt,
-        remarks: 'Ration card & PDS family quota records synchronized via GovMesh Resilient SOAP Queue.',
-        departmentTransactionId: context.correlationId,
+        remarks: 'Application delivered to Food Department queue. Awaiting officer scrutiny.',
+        departmentTransactionId: `FOOD-${context.applicationId}`,
         requestHash: reqHash,
         hashStatus: 'VERIFIED',
         documentHash: docHash,
         sentAt,
         receivedAt,
         acceptedAt,
-        completedAt,
+        completedAt: undefined,
         ackReceivedAt,
         acknowledgementId: ackId,
         timestampIntegrity: timestampReport,
         rawResponse: {
-          status: 'SUCCESS',
-          message: 'Queued and synchronized via GovMesh Interoperability Engine',
-          mode: 'RESILIENT_QUEUE'
+          status: 'RECEIVED',
+          message: 'Application delivered to Food Department queue',
+          mode: 'RESILIENT_CHANNEL'
         }
       };
     }
@@ -225,32 +225,6 @@ export class FoodAdapter implements DepartmentAdapter {
       parsedData = JSON.parse(rawText);
     } catch {
       parsedData = { raw: rawText };
-    }
-
-    if (parsedData?.status === 'FAILED' && (parsedData?.message?.includes('Application not found') || parsedData?.errorCode === 'APPLICATION_NOT_FOUND') && transformedPayload.applicationId !== 'GM-2026-000124') {
-      const fallbackPayload = { ...transformedPayload, applicationId: 'GM-2026-000124', correlationId: `${transformedPayload.correlationId || 'CORR-26'}-FB-${Date.now()}` };
-      const fbController = new AbortController();
-      const fbTimeout = setTimeout(() => fbController.abort(), 30000);
-      try {
-        response = await fetch(`${baseUrl}/api/govmesh/interoperability/address-update`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-GovMesh-API-Key': config.govmeshApiKey || 'gm-secret-key-2026-interop'
-          },
-          body: JSON.stringify(fallbackPayload),
-          signal: fbController.signal
-        });
-        clearTimeout(fbTimeout);
-        rawText = await response.text();
-        try {
-          parsedData = JSON.parse(rawText);
-        } catch {
-          parsedData = { raw: rawText };
-        }
-      } catch {
-        clearTimeout(fbTimeout);
-      }
     }
 
     const ackReceivedAt = new Date().toISOString();
@@ -350,14 +324,27 @@ export class FoodAdapter implements DepartmentAdapter {
   public normalizeResponse(rawResponse: any, httpStatus: number, context: AdapterRequestContext): DepartmentStepResult {
     const timestamp = context.createdAt || new Date().toISOString();
 
-    if (httpStatus >= 200 && httpStatus < 300 && (rawResponse?.status === 'SUCCESS' || !rawResponse?.status || rawResponse?.status === 'RECEIVED')) {
+    if (httpStatus >= 200 && httpStatus < 300) {
+      if (rawResponse?.status === 'APPROVED' || rawResponse?.data?.status === 'APPROVED' || rawResponse?.data?.status === 'COMPLETED') {
+        return {
+          departmentCode: 'FOOD',
+          departmentName: this.getDepartmentName(),
+          protocol: this.getProtocol(),
+          status: 'SUCCESS',
+          timestamp,
+          remarks: 'Ration card & PDS quota update approved by Food Supply Officer.',
+          departmentTransactionId: rawResponse?.correlationId || context.correlationId,
+          rawResponse
+        };
+      }
+
       return {
         departmentCode: 'FOOD',
         departmentName: this.getDepartmentName(),
         protocol: this.getProtocol(),
-        status: 'SUCCESS',
+        status: 'PENDING',
         timestamp,
-        remarks: 'Ration card & PDS family quota records successfully synchronized via SOAP transformation.',
+        remarks: 'Application received by Food & Civil Supplies Department. Awaiting officer scrutiny.',
         departmentTransactionId: rawResponse?.correlationId || context.correlationId,
         rawResponse
       };
@@ -367,9 +354,9 @@ export class FoodAdapter implements DepartmentAdapter {
       departmentCode: 'FOOD',
       departmentName: this.getDepartmentName(),
       protocol: this.getProtocol(),
-      status: 'SUCCESS',
+      status: 'FAILED',
       timestamp,
-      remarks: 'Ration card records synchronized via GovMesh Resilient Channel.',
+      remarks: rawResponse?.message || `Food Department returned error status: HTTP ${httpStatus}`,
       departmentTransactionId: rawResponse?.correlationId || context.correlationId,
       rawResponse
     };

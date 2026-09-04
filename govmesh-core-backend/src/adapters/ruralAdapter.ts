@@ -286,13 +286,26 @@ export class RuralAdapter implements DepartmentAdapter {
     const timestamp = context.createdAt || new Date().toISOString();
 
     if (httpStatus >= 200 && httpStatus < 300 && rawResponse?.success) {
+      if (rawResponse?.status === 'COMPLETED' || rawResponse?.status === 'APPROVED') {
+        return {
+          departmentCode: 'RURAL_DEVELOPMENT',
+          departmentName: this.getDepartmentName(),
+          protocol: this.getProtocol(),
+          status: 'SUCCESS',
+          timestamp,
+          remarks: 'Local Gram Panchayat voter & resident registry synchronized with verified address.',
+          departmentTransactionId: rawResponse?.departmentApplicationId || rawResponse?.record?.id || context.applicationId,
+          rawResponse
+        };
+      }
+
       return {
         departmentCode: 'RURAL_DEVELOPMENT',
         departmentName: this.getDepartmentName(),
         protocol: this.getProtocol(),
-        status: 'SUCCESS',
+        status: 'PENDING',
         timestamp,
-        remarks: 'Local Gram Panchayat voter & resident registry synchronized with verified address.',
+        remarks: 'Application received by Rural Development & Panchayat Raj. Awaiting officer scrutiny.',
         departmentTransactionId: rawResponse?.departmentApplicationId || rawResponse?.record?.id || context.applicationId,
         rawResponse
       };

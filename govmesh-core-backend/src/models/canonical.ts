@@ -8,6 +8,7 @@ export type TransactionStatus =
   | 'VALIDATING'
   | 'ACCEPTED'
   | 'PROCESSING' 
+  | 'IN_PROGRESS'
   | 'PARTIALLY_COMPLETED'
   | 'ACTION_REQUIRED' 
   | 'COMPLETED' 

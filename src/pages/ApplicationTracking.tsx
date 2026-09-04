@@ -15,8 +15,8 @@ export const ApplicationTracking: React.FC = () => {
     applications, setApplications, trackingState, triggerDemoState, uploadDocument, documents, activeAppId
   } = useDemo();
 
-  const [searchId, setSearchId] = useState(activeAppId || 'GM-2026-000124');
-  const [selectedAppId, setSelectedAppId] = useState(activeAppId || 'GM-2026-000124');
+  const [searchId, setSearchId] = useState(activeAppId || (applications.length > 0 ? applications[0].id : ''));
+  const [selectedAppId, setSelectedAppId] = useState(activeAppId || (applications.length > 0 ? applications[0].id : ''));
   const [isRetrying, setIsRetrying] = useState(false);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [showAuditModal, setShowAuditModal] = useState(false);
@@ -30,14 +30,6 @@ export const ApplicationTracking: React.FC = () => {
   const [showEvidenceModal, setShowEvidenceModal] = useState(false);
   const [evidenceData, setEvidenceData] = useState<InteroperabilityEvidence | null>(null);
   const [isLoadingEvidence, setIsLoadingEvidence] = useState(false);
-
-  // Bi-Directional Officer Action Simulation Modal
-  const [showOfficerActionModal, setShowOfficerActionModal] = useState(false);
-  const [officerDeptCode, setOfficerDeptCode] = useState<'REVENUE' | 'FOOD' | 'RURAL_DEVELOPMENT'>('FOOD');
-  const [officerStatus, setOfficerStatus] = useState<string>('SUCCESS');
-  const [officerRemarks, setOfficerRemarks] = useState<string>('Officer verified documents and approved address update.');
-  const [officerName, setOfficerName] = useState<string>('S. K. Kulkarni (Food Supply Officer)');
-  const [isSubmittingOfficerAction, setIsSubmittingOfficerAction] = useState(false);
 
   useEffect(() => {
     if (activeAppId) {
@@ -180,66 +172,6 @@ export const ApplicationTracking: React.FC = () => {
     }
   };
 
-  const handleOpenOfficerActionModal = (deptCode: 'REVENUE' | 'FOOD' | 'RURAL_DEVELOPMENT') => {
-    setOfficerDeptCode(deptCode);
-    setOfficerStatus('SUCCESS');
-    if (deptCode === 'FOOD') {
-      setOfficerName('S. K. Kulkarni (Food Supply Officer)');
-      setOfficerRemarks('Ration card updated with verified address and quota reallocated.');
-    } else if (deptCode === 'REVENUE') {
-      setOfficerName('R. P. Deshmukh (Tehsildar / Revenue Officer)');
-      setOfficerRemarks('Land record address verification completed and title synchronized.');
-    } else {
-      setOfficerName('V. B. Patil (Gram Sevak / Rural Officer)');
-      setOfficerRemarks('Gram Panchayat resident directory updated.');
-    }
-    setShowOfficerActionModal(true);
-  };
-
-  const handleExecuteOfficerCallback = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmittingOfficerAction(true);
-    try {
-      const callbackPayload = {
-        applicationId: selectedAppId,
-        departmentCode: officerDeptCode,
-        status: officerStatus,
-        remarks: officerRemarks,
-        officer: {
-          name: officerName,
-          role: `${officerDeptCode.toLowerCase()}.officer`,
-          notes: officerRemarks
-        },
-        acknowledgementId: `ACK-${officerDeptCode.slice(0, 3)}-${selectedAppId.replace(/[^a-zA-Z0-9]/g, '')}`,
-        timestamp: new Date().toISOString()
-      };
-
-      const res = await api.sendDepartmentStatusCallback(callbackPayload);
-      if (res && res.success) {
-        setShowOfficerActionModal(false);
-        // Force refresh application tracking state
-        const liveRes = await api.getGovMeshTransactionStatus(selectedAppId);
-        if (liveRes && liveRes.transaction) {
-          const liveTx = liveRes.transaction;
-          setApplications(prev => prev.map(a => a.id === selectedAppId ? {
-            ...a,
-            status: liveTx.status,
-            progressPercent: liveTx.progressPercent,
-            completedDepartments: liveTx.completedDepartments,
-            steps: liveTx.steps?.map((s: any) => ({
-              ...s,
-              action: s.departmentCode === 'REVENUE' ? 'Verify/update address record' : (s.departmentCode === 'FOOD' ? 'Update eligible ration/PDS record' : 'Update local Gram Panchayat record')
-            })) || a.steps
-          } : a));
-        }
-      }
-    } catch (err: any) {
-      alert(`Officer action callback error: ${err.message}`);
-    } finally {
-      setIsSubmittingOfficerAction(false);
-    }
-  };
-
   // Load audit trail when requested
   const fetchAuditLogs = async () => {
     try {
@@ -311,10 +243,10 @@ export const ApplicationTracking: React.FC = () => {
       console.warn('Search query error:', err);
     }
     
-    alert("Application ID not found in registry. Try searching: GM-2026-000124 or GM-2026-000087");
+    alert("Application ID not found in registry. Please check the Application ID and try again.");
   };
 
-  const app = applications.find(a => a.id === selectedAppId) || applications[0];
+  const app = applications.find(a => a.id === selectedAppId);
 
   const handleActionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -328,7 +260,7 @@ export const ApplicationTracking: React.FC = () => {
     }, 2000);
   };
 
-  const hasFailedSteps = app.steps.some(s => s.status === 'FAILED' || s.status === 'RETRYING');
+  const hasFailedSteps = app?.steps ? app.steps.some(s => s.status === 'FAILED' || s.status === 'RETRYING') : false;
 
   return (
     <div className="space-y-6 py-2">
@@ -352,7 +284,7 @@ export const ApplicationTracking: React.FC = () => {
             <span>Interoperability Proof</span>
           </button>
 
-          {(app.status === 'PARTIALLY_COMPLETED' || app.status === 'FAILED' || app.status === 'RETRY_REQUIRED' || hasFailedSteps) && (
+          {app && (app.status === 'PARTIALLY_COMPLETED' || app.status === 'FAILED' || app.status === 'RETRY_REQUIRED' || hasFailedSteps) && (
             <button
               onClick={handleRetryFailed}
               disabled={isRetrying}
@@ -384,7 +316,7 @@ export const ApplicationTracking: React.FC = () => {
           <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Enter Application Tracking ID (e.g. GM-2026-000124)..."
+            placeholder="Enter Application Tracking ID (e.g. GM-2026-XXXXXX)..."
             value={searchId}
             onChange={(e) => setSearchId(e.target.value)}
             className="w-full pl-9 pr-4 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-600 bg-slate-50 focus:bg-white transition"
@@ -411,7 +343,21 @@ export const ApplicationTracking: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Grid Content */}
+      {/* Empty State when no application is selected */}
+      {!app ? (
+        <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center shadow-sm space-y-4 max-w-xl mx-auto my-8">
+          <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto shadow-sm">
+            <Search className="w-7 h-7" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-base font-extrabold text-slate-800">No Application Selected</h3>
+            <p className="text-xs text-slate-500 leading-relaxed max-w-md mx-auto">
+              Submit a new service request from the Citizen Services tab, or enter an Application ID above to track status.
+            </p>
+          </div>
+        </div>
+      ) : (
+      /* Main Grid Content */
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Left Side: Timeline and Card */}
@@ -560,15 +506,6 @@ export const ApplicationTracking: React.FC = () => {
                         >
                           <Eye className="w-3 h-3 text-indigo-600" />
                           <span>View Received Request</span>
-                        </button>
-
-                        <button
-                          onClick={() => handleOpenOfficerActionModal(deptCode)}
-                          className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded text-[10px] font-bold shadow-sm transition flex items-center gap-1"
-                          title="Trigger Department Officer Action & Status Update"
-                        >
-                          <UserCheck className="w-3 h-3 text-emerald-400" />
-                          <span>Officer Action</span>
                         </button>
 
                         <span className={`text-[9px] font-extrabold px-2 py-1 rounded uppercase tracking-wider ${
@@ -751,88 +688,6 @@ export const ApplicationTracking: React.FC = () => {
         </div>
 
       </div>
-
-      {/* Bi-Directional Officer Action Simulation Modal */}
-      {showOfficerActionModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowOfficerActionModal(false)} />
-          <div className="relative bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-100 overflow-hidden transform transition-all z-10">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-900 text-white">
-              <div className="flex items-center gap-2">
-                <UserCheck className="w-4 h-4 text-emerald-400" />
-                <h3 className="text-sm font-bold">
-                  {officerDeptCode} — Officer Status Callback
-                </h3>
-              </div>
-              <button
-                onClick={() => setShowOfficerActionModal(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleExecuteOfficerCallback} className="p-6 space-y-4 text-xs">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Acting Officer Name & Role</label>
-                <input
-                  type="text"
-                  value={officerName}
-                  onChange={(e) => setOfficerName(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 font-semibold focus:outline-none focus:border-indigo-600"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Target Lifecycle State</label>
-                <select
-                  value={officerStatus}
-                  onChange={(e) => setOfficerStatus(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 font-semibold focus:outline-none focus:border-indigo-600"
-                >
-                  <option value="ACCEPTED">ACCEPTED — Accepted into department queue</option>
-                  <option value="PROCESSING">PROCESSING — Under scrutiny by officer</option>
-                  <option value="SUCCESS">SUCCESS / COMPLETED — Scrutiny passed & record updated</option>
-                  <option value="ACTION_REQUIRED">ACTION_REQUIRED — Request document re-upload</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Officer Scrutiny Remarks</label>
-                <textarea
-                  value={officerRemarks}
-                  onChange={(e) => setOfficerRemarks(e.target.value)}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 font-semibold focus:outline-none focus:border-indigo-600"
-                  required
-                />
-              </div>
-
-              <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 text-[10px] text-slate-600 space-y-1">
-                <span className="font-bold text-slate-800 block">Authoritative Callback Contract:</span>
-                <p>This action simulates the department officer executing an action on their departmental web portal. It notifies GovMesh Core via real-time callback, updating central tracking with a valid UTC timestamp.</p>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowOfficerActionModal(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmittingOfficerAction}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold shadow-sm transition disabled:opacity-50"
-                >
-                  {isSubmittingOfficerAction ? 'Sending Callback...' : 'Submit Officer Action'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
       )}
 
       {/* Department Received Request Modal */}

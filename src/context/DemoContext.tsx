@@ -363,8 +363,9 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           ]
         });
 
-        if (response.success && (response.status === 'COMPLETED' || response.progressPercent === 100)) {
-          const realSteps = response.transaction?.steps?.map((s: any) => ({
+        if (response.success) {
+          const tx = response.transaction;
+          const realSteps = tx?.steps?.map((s: any) => ({
             departmentName: s.departmentName,
             departmentCode: s.departmentCode,
             protocol: s.protocol,
@@ -378,33 +379,29 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
             acceptedAt: s.acceptedAt,
             completedAt: s.completedAt,
             acknowledgementId: s.acknowledgementId
-          })) || [
-            { departmentName: "Revenue & Forest Department", departmentCode: "REVENUE", protocol: "REST/JSON", action: "Verify/update address record", status: "SUCCESS", remarks: "Verified via Revenue Land Registry.", requestHash: reqHash, hashStatus: "VERIFIED", documentHash: docHash },
-            { departmentName: "Food, Civil Supplies & Consumer Protection", departmentCode: "FOOD", protocol: "SOAP/XML", action: "Update eligible ration/PDS record", status: "SUCCESS", remarks: "Synchronized via SOAP XML adapter.", requestHash: reqHash, hashStatus: "VERIFIED", documentHash: docHash },
-            { departmentName: "Rural Development & Panchayat Raj", departmentCode: "RURAL_DEVELOPMENT", protocol: "CSV/SFTP", action: "Update relevant local service record", status: "SUCCESS", remarks: "Synchronized via legacy CSV adapter.", requestHash: reqHash, hashStatus: "VERIFIED", documentHash: docHash }
-          ];
+          })) || newApp.steps;
 
-          // Update application to COMPLETED
+          // Update application with authoritative server response state
           setApplications(prev => prev.map(a => {
             if (a.id !== appId) return a;
             return {
               ...a,
-              status: "COMPLETED",
-              progressPercent: 100,
-              completedDepartments: 3,
-              requestVersion: response.transaction?.requestVersion || 1,
-              canonicalRequestHash: response.transaction?.canonicalRequestHash || reqHash,
-              documentHash: response.transaction?.documentHash || docHash,
+              status: (response.status as ApplicationStatus) || "SUBMITTED",
+              progressPercent: response.progressPercent !== undefined ? response.progressPercent : 10,
+              completedDepartments: response.completedDepartments !== undefined ? response.completedDepartments : 0,
+              requestVersion: tx?.requestVersion || 1,
+              canonicalRequestHash: tx?.canonicalRequestHash || reqHash,
+              documentHash: tx?.documentHash || docHash,
               steps: realSteps
             };
           }));
 
-          setTrackingState('RURAL_SUCCESS');
+          setTrackingState('SUBMITTED');
 
           addNotification({
-            title: "Cross-Department Synchronization Complete",
-            description: `GovMesh successfully synchronized application ${appId} across Revenue, Food, and Rural registries with verified cryptographic hashes.`,
-            type: "SUCCESS",
+            title: "Application Submitted & Queued for Verification",
+            description: `GovMesh successfully routed application ${appId} to Revenue, Food, and Rural departments. Awaiting departmental officer scrutiny.`,
+            type: "INFO",
             applicationId: appId,
             priority: "HIGH"
           });
@@ -415,7 +412,7 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return {
               ...a,
               status: "FAILED",
-              progressPercent: response.progressPercent || 40,
+              progressPercent: response.progressPercent || 0,
               steps: response.transaction?.steps?.map((s: any) => ({
                 departmentName: s.departmentName,
                 departmentCode: s.departmentCode,
