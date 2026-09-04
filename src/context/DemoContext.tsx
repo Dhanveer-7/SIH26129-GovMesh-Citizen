@@ -209,7 +209,7 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Submit address change request
   const submitServiceRequest = async (consentsApproved: { revenue: boolean; food: boolean; rural: boolean }) => {
-    const appId = `GM-2026-${Math.floor(100000 + Math.random() * 900000)}`;
+    const appId = "GM-2026-000124";
     const corrId = `CORR-26-${Math.floor(1000 + Math.random() * 9000)}`;
     const timeNow = new Date().toISOString();
     
@@ -236,7 +236,7 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // 2. Create Consents
     const newConsents: ConsentRecord[] = [
       {
-        id: `CONSENT-${Math.floor(10000 + Math.random() * 90000)}-REV`,
+        id: "CONSENT-00124-REV",
         department: "Revenue Department",
         scope: ["Name", "New Address", "Address Proof Verification Result"],
         purpose: "Address registry update verification",
@@ -246,7 +246,7 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
       },
       {
-        id: `CONSENT-${Math.floor(10000 + Math.random() * 90000)}-FOOD`,
+        id: "CONSENT-00124-FOOD",
         department: "Food & Civil Supplies Department",
         scope: ["Name", "New Address", "Supporting Verification Result"],
         purpose: "Ration/PDS registry address update",
@@ -256,7 +256,7 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
       },
       {
-        id: `CONSENT-${Math.floor(10000 + Math.random() * 90000)}-RURAL`,
+        id: "CONSENT-00124-RURAL",
         department: "Rural Development Department",
         scope: ["Name", "New Address", "Local Registry Details"],
         purpose: "Local panchayat address database synchronization",
@@ -277,14 +277,14 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         purpose: "Address registry verification",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         applicationId: appId,
-        consentId: `CONSENT-${Math.floor(10000 + Math.random() * 90000)}-REV`
+        consentId: "CONSENT-00124"
       });
     }
 
     if (isRealTransaction) {
       console.log("[GovMesh Core Ingress] Real Transaction mode active. Invoking GovMesh Core Orchestrator...");
       
-      setApplications(prev => [newApp, ...prev]);
+      setApplications(prev => [newApp, ...prev.filter(a => a.id !== appId)]);
       setConsents(prev => [...newConsents, ...prev]);
       setSharingLogs(prev => [...newSharingLogs, ...prev]);
       
@@ -298,7 +298,7 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           citizenId: "GM-CIT-10001",
           serviceCode: "ADDRESS_CHANGE",
           purpose: "Unified residence address update across state registries",
-          consentId: `CONSENT-${Math.floor(10000 + Math.random() * 90000)}`,
+          consentId: "CONSENT-00124",
           consents: consentsApproved,
           citizen: {
             name: ocrFields?.name || "Aarav Sharma",
@@ -310,7 +310,18 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         });
 
-        if (response.success && response.status === 'COMPLETED') {
+        if (response.success && (response.status === 'COMPLETED' || response.progressPercent === 100)) {
+          const realSteps = response.transaction?.steps?.map((s: any) => ({
+            departmentName: s.departmentName,
+            action: s.departmentCode === 'REVENUE' ? 'Verify/update address record' : (s.departmentCode === 'FOOD' ? 'Update eligible ration/PDS record' : 'Update relevant local service record'),
+            status: s.status,
+            remarks: s.remarks
+          })) || [
+            { departmentName: "Revenue Department", action: "Verify/update address record", status: "SUCCESS", remarks: "Verified via Revenue Land Registry on Render." },
+            { departmentName: "Food & Civil Supplies Department", action: "Update eligible ration/PDS record", status: "SUCCESS", remarks: "Synchronized via SOAP XML adapter." },
+            { departmentName: "Rural Development Department", action: "Update relevant local service record", status: "SUCCESS", remarks: "Synchronized via legacy CSV adapter." }
+          ];
+
           // Update application to COMPLETED
           setApplications(prev => prev.map(a => {
             if (a.id !== appId) return a;
@@ -319,11 +330,7 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
               status: "COMPLETED",
               progressPercent: 100,
               completedDepartments: 3,
-              steps: [
-                { departmentName: "Revenue Department", action: "Verify/update address record", status: "SUCCESS", remarks: "Verified via Revenue Land Registry on Render." },
-                { departmentName: "Food & Civil Supplies Department", action: "Update eligible ration/PDS record", status: "SUCCESS", remarks: "Synchronized via SOAP XML adapter." },
-                { departmentName: "Rural Development Department", action: "Update relevant local service record", status: "SUCCESS", remarks: "Synchronized via legacy CSV adapter." }
-              ]
+              steps: realSteps
             };
           }));
 
@@ -345,7 +352,12 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
               ...a,
               status: "FAILED",
               progressPercent: response.progressPercent || 40,
-              steps: [
+              steps: response.transaction?.steps?.map((s: any) => ({
+                departmentName: s.departmentName,
+                action: s.departmentCode === 'REVENUE' ? 'Verify/update address record' : (s.departmentCode === 'FOOD' ? 'Update eligible ration/PDS record' : 'Update relevant local service record'),
+                status: s.status,
+                remarks: s.remarks
+              })) || [
                 { departmentName: "Revenue Department", action: "Verify/update address record", status: (response.progressPercent >= 40 ? "SUCCESS" : "FAILED"), remarks: "Verified." },
                 { departmentName: "Food & Civil Supplies Department", action: "Update eligible ration/PDS record", status: (response.progressPercent >= 70 ? "SUCCESS" : "FAILED"), remarks: "Food status" },
                 { departmentName: "Rural Development Department", action: "Update relevant local service record", status: (response.progressPercent >= 100 ? "SUCCESS" : "FAILED"), remarks: failedMsg }

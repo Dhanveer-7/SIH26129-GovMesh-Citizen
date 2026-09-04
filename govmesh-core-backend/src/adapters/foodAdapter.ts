@@ -47,7 +47,7 @@ export const foodAdapter = {
           verified: true
         },
         consent: {
-          id: request.consentId || 'CONSENT-00124'
+          id: (request.consentId && request.consentId.startsWith('CONSENT-00')) ? request.consentId : 'CONSENT-00124'
         }
       };
 
