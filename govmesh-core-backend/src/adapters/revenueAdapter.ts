@@ -15,7 +15,7 @@ async function getRevenueAuthToken(baseUrl: string): Promise<string> {
   }
 
   try {
-    const res = await fetch(`${baseUrl}/revenue/auth/login`, {
+    const res = await fetch(`${baseUrl}/api/v1/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -100,7 +100,8 @@ export class RevenueAdapter implements DepartmentAdapter {
       'X-Correlation-ID': context.correlationId,
       'X-GovMesh-App-ID': context.applicationId,
       'X-GovMesh-Request-Hash': context.canonicalRequestHash || transformedPayload.canonical_hash,
-      'X-GovMesh-Sent-At': sentAt
+      'X-GovMesh-Sent-At': sentAt,
+      'X-GovMesh-API-Key': process.env.GOVMESH_API_KEY || 'govmesh-live-secure-key-2026'
     };
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
@@ -131,22 +132,12 @@ export class RevenueAdapter implements DepartmentAdapter {
     const timeoutId = setTimeout(() => controller.abort(), 35000);
 
     try {
-      let response = await fetch(`${baseUrl}/api/v1/revenue/address/verify`, {
+      const response = await fetch(`${baseUrl}/api/v1/revenue/address/verify`, {
         method: 'POST',
         headers,
         body: JSON.stringify(transformedPayload),
         signal: controller.signal
       });
-
-      if (response.status === 404 && transformedPayload.application_id !== 'GM-2026-000124') {
-        const fallbackPayload = { ...transformedPayload, application_id: 'GM-2026-000124' };
-        response = await fetch(`${baseUrl}/api/v1/revenue/address/verify`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(fallbackPayload),
-          signal: controller.signal
-        });
-      }
 
       clearTimeout(timeoutId);
 

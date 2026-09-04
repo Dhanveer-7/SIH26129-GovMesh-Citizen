@@ -242,8 +242,10 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Submit address change request
   const submitServiceRequest = async (consentsApproved: { revenue: boolean; food: boolean; rural: boolean }) => {
-    const appId = "GM-2026-000124";
-    const corrId = "CORR-26-000124";
+    const randomSuffix = Math.floor(100000 + Math.random() * 900000);
+    const appId = activeAppId || `GM-2026-${randomSuffix}`;
+    const corrId = `CORR-26-${randomSuffix}`;
+    const consentBase = `CONSENT-${randomSuffix}`;
     const timeNowUtc = new Date().toISOString();
     const docHash = uploadedDoc?.documentHash || 'sha256:a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e';
     const reqHash = 'sha256:7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069';
@@ -274,7 +276,7 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // 2. Create Consents
     const newConsents: ConsentRecord[] = [
       {
-        id: "CONSENT-00124-REV",
+        id: `${consentBase}-REV`,
         department: "Revenue & Forest Department",
         scope: ["Name", "New Address", "Address Proof Verification Result"],
         purpose: "Address registry update verification",
@@ -284,7 +286,7 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
       },
       {
-        id: "CONSENT-00124-FOOD",
+        id: `${consentBase}-FOOD`,
         department: "Food, Civil Supplies & Consumer Protection",
         scope: ["Name", "New Address", "Supporting Verification Result"],
         purpose: "Ration/PDS registry address update",
@@ -294,7 +296,7 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
       },
       {
-        id: "CONSENT-00124-RURAL",
+        id: `${consentBase}-RURAL`,
         department: "Rural Development & Panchayat Raj",
         scope: ["Name", "New Address", "Local Registry Details"],
         purpose: "Local panchayat address database synchronization",
@@ -315,7 +317,7 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         purpose: "Address registry verification",
         timestamp: timeNowUtc,
         applicationId: appId,
-        consentId: "CONSENT-00124"
+        consentId: consentBase
       });
     }
 
@@ -336,7 +338,7 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           citizenId: "GM-CIT-10001",
           serviceCode: "ADDRESS_CHANGE",
           purpose: "Unified residence address update across state registries",
-          consentId: "CONSENT-00124",
+          consentId: consentBase,
           consents: consentsApproved,
           citizen: {
             name: ocrFields?.name || "Aarav Sharma",
