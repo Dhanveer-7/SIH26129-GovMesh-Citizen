@@ -445,7 +445,7 @@ class OrchestratorService {
 
   private aggregateTransactionState(tx: TransactionRecord): TransactionStatus {
     const total = tx.steps.length;
-    const completed = tx.steps.filter(s => s.status === 'SUCCESS').length;
+    const completed = tx.steps.filter(s => s.status === 'SUCCESS' || (s.status as string) === 'COMPLETED' || (s.status as string) === 'VERIFIED' || (s.status as string) === 'APPROVED').length;
     const failed = tx.steps.filter(s => s.status === 'FAILED').length;
     const actionReq = tx.steps.filter(s => s.status === 'ACTION_REQUIRED').length;
     const blocked = tx.steps.filter(s => s.status === 'CONSENT_BLOCKED').length;
@@ -545,11 +545,14 @@ class OrchestratorService {
     const eventTime = timestamp || new Date().toISOString();
     const stepIndex = tx.steps.findIndex(s => s.departmentCode === departmentCode);
 
+    const isSuccess = status === 'SUCCESS' || (status as string) === 'COMPLETED' || (status as string) === 'VERIFIED' || (status as string) === 'APPROVED';
+    const normalizedStepStatus: DepartmentStepStatus = isSuccess ? 'SUCCESS' : status;
+
     if (stepIndex >= 0) {
-      tx.steps[stepIndex].status = status;
+      tx.steps[stepIndex].status = normalizedStepStatus;
       tx.steps[stepIndex].remarks = remarks;
       tx.steps[stepIndex].timestamp = eventTime;
-      if (status === 'SUCCESS') tx.steps[stepIndex].completedAt = eventTime;
+      if (isSuccess) tx.steps[stepIndex].completedAt = eventTime;
       if (status === 'ACCEPTED') tx.steps[stepIndex].acceptedAt = eventTime;
       if (status === 'PROCESSING') tx.steps[stepIndex].processingStartedAt = eventTime;
       if (acknowledgementId) tx.steps[stepIndex].acknowledgementId = acknowledgementId;
@@ -558,9 +561,9 @@ class OrchestratorService {
     evidenceService.updateDepartmentLifecycle(
       departmentCode,
       applicationId,
-      status,
+      normalizedStepStatus,
       remarks,
-      status === 'SUCCESS' ? eventTime : undefined,
+      isSuccess ? eventTime : undefined,
       undefined,
       status === 'ACCEPTED' ? eventTime : undefined
     );
@@ -568,10 +571,10 @@ class OrchestratorService {
     auditService.log({
       correlationId: tx.correlationId,
       applicationId: tx.applicationId,
-      event: status === 'SUCCESS' ? 'DEPARTMENT_COMPLETED' : (status === 'PROCESSING' ? 'DEPARTMENT_PROCESSING' : 'DEPARTMENT_ACCEPTED'),
+      event: isSuccess ? 'DEPARTMENT_COMPLETED' : (status === 'PROCESSING' ? 'DEPARTMENT_PROCESSING' : 'DEPARTMENT_ACCEPTED'),
       department: departmentCode,
       actor: officerInfo?.name ? `${officerInfo.name} (${officerInfo.role || 'Department Officer'})` : `${departmentCode} Officer Portal`,
-      result: status === 'SUCCESS' ? 'SUCCESS' : (status === 'FAILED' ? 'FAILED' : 'PENDING'),
+      result: isSuccess ? 'SUCCESS' : (status === 'FAILED' ? 'FAILED' : 'PENDING'),
       details: `${remarks} ${officerInfo?.notes ? `[Notes: ${officerInfo.notes}]` : ''}`
     });
 
