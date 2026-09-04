@@ -124,6 +124,53 @@ router.post('/api/govmesh/transactions/:applicationId/retry', async (req, res) =
   }
 });
 
+// Bi-Directional Department Officer Status Callback Endpoint
+router.post('/api/govmesh/callbacks/department-status', async (req, res) => {
+  try {
+    const { applicationId, departmentCode, status, remarks, officer, acknowledgementId, timestamp } = req.body;
+
+    if (!applicationId || !isValidIdentifier(applicationId)) {
+      return res.status(400).json({ success: false, message: 'Invalid or missing applicationId.' });
+    }
+    if (!departmentCode || !isValidIdentifier(departmentCode)) {
+      return res.status(400).json({ success: false, message: 'Invalid or missing departmentCode.' });
+    }
+
+    const updatedTx = orchestratorService.updateDepartmentCallback(
+      applicationId,
+      departmentCode.toUpperCase(),
+      status || 'SUCCESS',
+      remarks || `Status transitioned to ${status} by department officer.`,
+      officer,
+      acknowledgementId,
+      timestamp
+    );
+
+    if (!updatedTx) {
+      return res.status(404).json({
+        success: false,
+        message: `Transaction record for '${applicationId}' not found in GovMesh Core.`
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Department [${departmentCode}] status updated to [${status}].`,
+      applicationId,
+      departmentCode,
+      status: updatedTx.status,
+      progressPercent: updatedTx.progressPercent,
+      transaction: updatedTx
+    });
+  } catch (err: any) {
+    console.error('[GovMesh Callback Error]', err);
+    res.status(500).json({
+      success: false,
+      message: `Failed to process department status callback: ${err.message}`
+    });
+  }
+});
+
 // Evidence & End-to-End Traceability Endpoints
 
 router.get('/api/govmesh/evidence/:applicationId', (req, res) => {

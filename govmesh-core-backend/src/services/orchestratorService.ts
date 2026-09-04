@@ -3,6 +3,7 @@ import {
   TransactionRecord,
   CanonicalTransactionResponse,
   DepartmentStepResult,
+  DepartmentStepStatus,
   DepartmentCode,
   TransactionStatus,
   ProofDocument
@@ -499,7 +500,70 @@ class OrchestratorService {
       tx.status = 'PROCESSING';
     }
 
+    const finalAckReceivedAt = new Date().toISOString();
+    tx.ackReceivedAt = finalAckReceivedAt;
+    tx.timestampIntegrity = evidenceService.validateTimestampOrdering({
+      createdAt: tx.createdAt,
+      sentAt: tx.sentAt,
+      receivedAt: tx.receivedAt || tx.steps[0]?.receivedAt,
+      validatedAt: tx.validatedAt || tx.steps[0]?.validatedAt,
+      acceptedAt: tx.acceptedAt || tx.steps[0]?.acceptedAt,
+      processingStartedAt: tx.processingStartedAt || tx.steps[0]?.processingStartedAt,
+      completedAt: tx.completedAt,
+      ackReceivedAt: finalAckReceivedAt
+    });
+
     return tx.status;
+  }
+
+  public updateDepartmentCallback(
+    applicationId: string,
+    departmentCode: DepartmentCode,
+    status: DepartmentStepStatus,
+    remarks: string,
+    officerInfo?: { name?: string; role?: string; notes?: string },
+    acknowledgementId?: string,
+    timestamp?: string
+  ): TransactionRecord | undefined {
+    const tx = this.transactions.get(applicationId);
+    if (!tx) return undefined;
+
+    const eventTime = timestamp || new Date().toISOString();
+    const stepIndex = tx.steps.findIndex(s => s.departmentCode === departmentCode);
+
+    if (stepIndex >= 0) {
+      tx.steps[stepIndex].status = status;
+      tx.steps[stepIndex].remarks = remarks;
+      tx.steps[stepIndex].timestamp = eventTime;
+      if (status === 'SUCCESS') tx.steps[stepIndex].completedAt = eventTime;
+      if (status === 'ACCEPTED') tx.steps[stepIndex].acceptedAt = eventTime;
+      if (status === 'PROCESSING') tx.steps[stepIndex].processingStartedAt = eventTime;
+      if (acknowledgementId) tx.steps[stepIndex].acknowledgementId = acknowledgementId;
+    }
+
+    evidenceService.updateDepartmentLifecycle(
+      departmentCode,
+      applicationId,
+      status,
+      remarks,
+      status === 'SUCCESS' ? eventTime : undefined,
+      undefined,
+      status === 'ACCEPTED' ? eventTime : undefined
+    );
+
+    auditService.log({
+      correlationId: tx.correlationId,
+      applicationId: tx.applicationId,
+      event: status === 'SUCCESS' ? 'DEPARTMENT_COMPLETED' : (status === 'PROCESSING' ? 'DEPARTMENT_PROCESSING' : 'DEPARTMENT_ACCEPTED'),
+      department: departmentCode,
+      actor: officerInfo?.name ? `${officerInfo.name} (${officerInfo.role || 'Department Officer'})` : `${departmentCode} Officer Portal`,
+      result: status === 'SUCCESS' ? 'SUCCESS' : (status === 'FAILED' ? 'FAILED' : 'PENDING'),
+      details: `${remarks} ${officerInfo?.notes ? `[Notes: ${officerInfo.notes}]` : ''}`
+    });
+
+    this.aggregateTransactionState(tx);
+    this.transactions.set(applicationId, tx);
+    return tx;
   }
 
   private generateStatusMessage(tx: TransactionRecord): string {

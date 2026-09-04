@@ -4,7 +4,8 @@ import {
   InteroperabilityEvidence,
   DepartmentCode,
   DepartmentStepStatus,
-  TransactionRecord
+  TransactionRecord,
+  TimestampIntegrityReport
 } from '../models/canonical.js';
 import { cryptoService } from './cryptoService.js';
 
@@ -199,8 +200,108 @@ class EvidenceService {
     });
   }
 
+  public validateTimestampOrdering(timestamps: {
+    createdAt?: string;
+    sentAt?: string;
+    receivedAt?: string;
+    validatedAt?: string;
+    acceptedAt?: string;
+    processingStartedAt?: string;
+    completedAt?: string;
+    ackReceivedAt?: string;
+  }): TimestampIntegrityReport {
+    const stageDefs: { key: keyof typeof timestamps; stage: string; system: string; owner: 'GOVMESH' | 'DEPARTMENT' }[] = [
+      { key: 'createdAt', stage: 'Request Created (Ingress)', system: 'GovMesh Citizen Portal / Core', owner: 'GOVMESH' },
+      { key: 'sentAt', stage: 'Request Dispatched', system: 'GovMesh Department Adapter', owner: 'GOVMESH' },
+      { key: 'receivedAt', stage: 'Request Ingested', system: 'Department Ingress Gateway', owner: 'DEPARTMENT' },
+      { key: 'validatedAt', stage: 'Schema & Hash Validated', system: 'Department Security Guard', owner: 'DEPARTMENT' },
+      { key: 'acceptedAt', stage: 'Request Accepted into Queue', system: 'Department Core DB', owner: 'DEPARTMENT' },
+      { key: 'processingStartedAt', stage: 'Officer Scrutiny Started', system: 'Department Officer Portal', owner: 'DEPARTMENT' },
+      { key: 'completedAt', stage: 'Processing Completed', system: 'Department Registry Engine', owner: 'DEPARTMENT' },
+      { key: 'ackReceivedAt', stage: 'Acknowledgement Received', system: 'GovMesh Core Ledger', owner: 'GOVMESH' }
+    ];
+
+    const timeline: { stage: string; timestamp: string; system: string; owner: 'GOVMESH' | 'DEPARTMENT' }[] = [];
+    const orderedEntries: { key: string; stage: string; timestamp: string; epoch: number }[] = [];
+
+    for (const def of stageDefs) {
+      const ts = timestamps[def.key];
+      if (ts) {
+        const epoch = new Date(ts).getTime();
+        timeline.push({
+          stage: def.stage,
+          timestamp: ts,
+          system: def.system,
+          owner: def.owner
+        });
+        orderedEntries.push({
+          key: def.key,
+          stage: def.stage,
+          timestamp: ts,
+          epoch
+        });
+      }
+    }
+
+    const violations: string[] = [];
+    let maxSkewMs = 0;
+    let hasStrictViolation = false;
+    let hasClockSkewWarning = false;
+
+    for (let i = 0; i < orderedEntries.length - 1; i++) {
+      const curr = orderedEntries[i];
+      const next = orderedEntries[i + 1];
+
+      if (next.epoch < curr.epoch) {
+        const diffMs = curr.epoch - next.epoch;
+        if (diffMs > maxSkewMs) maxSkewMs = diffMs;
+
+        if (diffMs <= 5000) {
+          hasClockSkewWarning = true;
+          violations.push(`Minor cloud server clock skew detected between [${curr.stage}] (${curr.timestamp}) and [${next.stage}] (${next.timestamp}): ${diffMs}ms delta.`);
+        } else {
+          hasStrictViolation = true;
+          violations.push(`Chronological ordering violated: [${next.stage}] (${next.timestamp}) occurred ${diffMs}ms before [${curr.stage}] (${curr.timestamp}).`);
+        }
+      }
+    }
+
+    let status: 'VERIFIED' | 'WARNING' | 'FAILED' = 'VERIFIED';
+    let summary = 'Strict chronological timestamp sequence verified across all systems.';
+
+    if (hasStrictViolation) {
+      status = 'FAILED';
+      summary = `Timestamp integrity failure: ${violations.length} ordering violation(s) detected.`;
+    } else if (hasClockSkewWarning) {
+      status = 'WARNING';
+      summary = `Chronological order consistent with acceptable cloud server clock skew (${maxSkewMs}ms).`;
+    }
+
+    return {
+      status,
+      skewMs: maxSkewMs,
+      timeline,
+      violations,
+      summary
+    };
+  }
+
   public recordDepartmentReceived(record: DepartmentReceivedRequest): DepartmentReceivedRequest {
     const key = `${record.departmentCode}:${record.applicationId}`;
+    if (!record.timestampIntegrity) {
+      record.timestampIntegrity = this.validateTimestampOrdering({
+        sentAt: record.sentAt,
+        receivedAt: record.receivedAt,
+        validatedAt: record.validatedAt,
+        acceptedAt: record.acceptedAt,
+        processingStartedAt: record.processingStartedAt,
+        completedAt: record.completedAt,
+        ackReceivedAt: record.ackReceivedAt
+      });
+    }
+    if (record.acknowledgement && !record.acknowledgement.timestampIntegrity) {
+      record.acknowledgement.timestampIntegrity = record.timestampIntegrity;
+    }
     this.receivedStore.set(key, record);
     return record;
   }
@@ -210,19 +311,32 @@ class EvidenceService {
     applicationId: string,
     state: DepartmentStepStatus,
     remarks?: string,
-    completedAt?: string
+    completedAt?: string,
+    validatedAt?: string,
+    acceptedAt?: string
   ): DepartmentReceivedRequest | undefined {
     const key = `${departmentCode}:${applicationId}`;
     const record = this.receivedStore.get(key);
     if (record) {
       record.lifecycleState = state;
       record.updatedAt = new Date().toISOString();
-      if (completedAt) {
-        record.completedAt = completedAt;
-      }
-      if (remarks) {
-        record.acknowledgement.remarks = remarks;
-      }
+      if (completedAt) record.completedAt = completedAt;
+      if (validatedAt) record.validatedAt = validatedAt;
+      if (acceptedAt) record.acceptedAt = acceptedAt;
+      if (remarks) record.acknowledgement.remarks = remarks;
+      record.acknowledgement.status = state === 'SUCCESS' ? 'COMPLETED' : (state === 'ACCEPTED' ? 'ACCEPTED' : (state === 'PROCESSING' ? 'PROCESSING' : 'REJECTED'));
+      
+      record.timestampIntegrity = this.validateTimestampOrdering({
+        sentAt: record.sentAt,
+        receivedAt: record.receivedAt,
+        validatedAt: record.validatedAt,
+        acceptedAt: record.acceptedAt,
+        processingStartedAt: record.processingStartedAt,
+        completedAt: record.completedAt,
+        ackReceivedAt: record.ackReceivedAt || new Date().toISOString()
+      });
+      record.acknowledgement.timestampIntegrity = record.timestampIntegrity;
+
       this.receivedStore.set(key, record);
     }
     return record;
@@ -271,19 +385,33 @@ class EvidenceService {
         departmentName: r.departmentName,
         protocol: r.departmentCode === 'REVENUE' ? 'REST/JSON' : (r.departmentCode === 'FOOD' ? 'SOAP/XML' : 'CSV/SFTP'),
         lifecycleState: r.lifecycleState,
+        sentAt: r.sentAt,
         receivedAt: r.receivedAt,
+        validatedAt: r.validatedAt,
         acceptedAt: r.acceptedAt,
+        processingStartedAt: r.processingStartedAt,
         completedAt: r.completedAt,
+        ackReceivedAt: r.ackReceivedAt,
         requestHash: r.requestHash,
         hashStatus: r.hashStatus,
         documentHash: r.documents[0]?.documentHash,
         documentIntegrity: r.documents[0]?.integrityStatus || 'NOT_APPLICABLE',
-        acknowledgementId: r.acknowledgement.acknowledgementId
+        acknowledgementId: r.acknowledgement.acknowledgementId,
+        timestampIntegrity: r.timestampIntegrity
       };
     });
 
     const canonicalHash = tx?.canonicalRequestHash || received[0]?.requestHash || 'sha256:unknown';
     const docHash = tx?.documentHash || received[0]?.documents[0]?.documentHash;
+
+    const overallTimestampReport = this.validateTimestampOrdering({
+      createdAt: tx?.createdAt || received[0]?.receivedAt,
+      sentAt: tx?.sentAt || received[0]?.sentAt,
+      receivedAt: received[0]?.receivedAt,
+      acceptedAt: received[0]?.acceptedAt,
+      completedAt: tx?.completedAt || received[0]?.completedAt,
+      ackReceivedAt: tx?.ackReceivedAt || new Date().toISOString()
+    });
 
     return {
       applicationId,
@@ -291,10 +419,13 @@ class EvidenceService {
       serviceCode: tx?.serviceCode || received[0]?.serviceCode || 'ADDRESS_CHANGE',
       requestVersion: tx?.requestVersion || received[0]?.requestVersion || 1,
       createdAt: tx?.createdAt || received[0]?.receivedAt || new Date().toISOString(),
+      sentAt: tx?.sentAt || received[0]?.sentAt,
+      completedAt: tx?.completedAt || received[0]?.completedAt,
       canonicalRequestHash: canonicalHash,
       documentHash: docHash,
       overallStatus: tx?.status || 'COMPLETED',
       progressPercent: tx?.progressPercent !== undefined ? tx?.progressPercent : 100,
+      timestampIntegrity: overallTimestampReport,
       departmentDelivery: delivery,
       receivedRequests: received
     };
