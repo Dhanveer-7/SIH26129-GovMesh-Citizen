@@ -4,6 +4,7 @@ import { serviceRegistry } from '../registry/serviceRegistry.js';
 import { auditService } from '../services/auditService.js';
 import { cryptoService } from '../services/cryptoService.js';
 import { evidenceService } from '../services/evidenceService.js';
+import { config } from '../config.js';
 
 export class FoodAdapter implements DepartmentAdapter {
   public getDepartmentCode(): DepartmentCode {
@@ -160,7 +161,8 @@ export class FoodAdapter implements DepartmentAdapter {
           'Content-Type': 'application/json',
           'X-Correlation-ID': context.correlationId,
           'X-GovMesh-App-ID': context.applicationId,
-          'X-GovMesh-Request-Hash': reqHash
+          'X-GovMesh-Request-Hash': reqHash,
+          'X-GovMesh-API-Key': config.govmeshApiKey || 'gm-secret-key-2026-interop'
         },
         body: JSON.stringify(transformedPayload),
         signal: controller.signal
