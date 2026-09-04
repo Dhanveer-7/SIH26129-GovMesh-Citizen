@@ -277,7 +277,7 @@ export class RevenueAdapter implements DepartmentAdapter {
         authorizedFields: ['citizen.name', 'citizen.address.line', 'citizen.address.district', 'citizen.address.taluka', 'consent_id'],
         receivedPayload: transformedPayload,
         documents: docRecords,
-        lifecycleState: 'SUCCESS',
+        lifecycleState: 'ACCEPTED',
         acknowledgement: {
           acknowledgementId: ackId,
           applicationId: context.applicationId,
@@ -287,13 +287,13 @@ export class RevenueAdapter implements DepartmentAdapter {
           sentAt,
           receivedAt,
           acceptedAt,
-          completedAt,
+          completedAt: undefined,
           ackReceivedAt,
-          status: 'COMPLETED',
+          status: 'ACCEPTED',
           requestHash: reqHash,
           documentHash: docHash,
           hashStatus: 'VERIFIED',
-          remarks: 'Address record verified and synchronized via GovMesh Resilient Scrutiny Channel.',
+          remarks: 'Application delivered to Revenue Department queue. Awaiting desk scrutiny.',
           timestampIntegrity: timestampReport
         },
         updatedAt: ackReceivedAt,
@@ -304,9 +304,9 @@ export class RevenueAdapter implements DepartmentAdapter {
         departmentCode: 'REVENUE',
         departmentName: this.getDepartmentName(),
         protocol: this.getProtocol(),
-        status: 'SUCCESS',
+        status: 'PENDING',
         timestamp: receivedAt,
-        remarks: 'Address record verified and synchronized via GovMesh Resilient Scrutiny Channel.',
+        remarks: 'Application delivered to Revenue Department queue. Awaiting desk scrutiny.',
         departmentTransactionId: `REV-${context.applicationId}`,
         requestHash: reqHash,
         hashStatus: 'VERIFIED',
@@ -314,13 +314,13 @@ export class RevenueAdapter implements DepartmentAdapter {
         sentAt,
         receivedAt,
         acceptedAt,
-        completedAt,
+        completedAt: undefined,
         ackReceivedAt,
         acknowledgementId: ackId,
         timestampIntegrity: timestampReport,
         rawResponse: {
-          status: 'SUCCESS',
-          message: 'Address record synchronized via GovMesh Interoperability Engine',
+          status: 'RECEIVED',
+          message: 'Application delivered to Revenue Department queue',
           mode: 'RESILIENT_CHANNEL'
         }
       };
@@ -330,14 +330,27 @@ export class RevenueAdapter implements DepartmentAdapter {
   public normalizeResponse(rawResponse: any, httpStatus: number, context: AdapterRequestContext): DepartmentStepResult {
     const timestamp = context.createdAt || new Date().toISOString();
 
-    if (httpStatus >= 200 && httpStatus < 300 && (rawResponse?.success || rawResponse?.data?.status === 'VERIFIED' || rawResponse?.status === 'VERIFIED')) {
+    if (httpStatus >= 200 && httpStatus < 300) {
+      if (rawResponse?.data?.status === 'VERIFIED' || rawResponse?.status === 'VERIFIED') {
+        return {
+          departmentCode: 'REVENUE',
+          departmentName: this.getDepartmentName(),
+          protocol: this.getProtocol(),
+          status: 'SUCCESS',
+          timestamp,
+          remarks: 'Address record verified and approved by Revenue Officer.',
+          departmentTransactionId: rawResponse?.data?.applicationId || rawResponse?.application_id || context.applicationId,
+          rawResponse
+        };
+      }
+
       return {
         departmentCode: 'REVENUE',
         departmentName: this.getDepartmentName(),
         protocol: this.getProtocol(),
-        status: 'SUCCESS',
+        status: 'PENDING',
         timestamp,
-        remarks: 'Address record successfully verified and updated on Revenue Land Registry.',
+        remarks: 'Application received by Revenue Department. Awaiting officer scrutiny.',
         departmentTransactionId: rawResponse?.data?.applicationId || rawResponse?.application_id || context.applicationId,
         rawResponse
       };

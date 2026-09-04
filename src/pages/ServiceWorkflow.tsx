@@ -875,7 +875,7 @@ export const ServiceWorkflow: React.FC = () => {
           <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl space-y-2 w-full max-w-md text-xs">
             <div className="flex justify-between">
               <span className="text-slate-450 uppercase tracking-wide font-bold text-[10px]">Application ID</span>
-              <span className="font-bold text-slate-800 font-mono">{activeAppId || "GM-2026-000124"}</span>
+              <span className="font-bold text-slate-800 font-mono">{activeAppId}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-450 uppercase tracking-wide font-bold text-[10px]">Workflow Core</span>

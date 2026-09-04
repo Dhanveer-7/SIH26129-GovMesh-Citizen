@@ -428,7 +428,7 @@ class OrchestratorService {
     this.transactions.set(appId, tx);
 
     return {
-      success: finalStatus === 'COMPLETED' || finalStatus === 'PARTIALLY_COMPLETED',
+      success: finalStatus === 'COMPLETED' || finalStatus === 'PARTIALLY_COMPLETED' || finalStatus === 'IN_PROGRESS' || finalStatus === 'SUBMITTED' || finalStatus === 'PROCESSING',
       applicationId: appId,
       correlationId: corrId,
       requestVersion: reqVersion,
@@ -460,7 +460,18 @@ class OrchestratorService {
       return tx.status;
     }
 
-    tx.progressPercent = Math.round((completed / total) * 100);
+    // Dynamic Human-In-The-Loop Progress Calculation
+    if (completed === 0) {
+      tx.progressPercent = 10;
+    } else if (completed === 1) {
+      tx.progressPercent = 35;
+    } else if (completed === 2) {
+      tx.progressPercent = 70;
+    } else if (completed >= activeTotal) {
+      tx.progressPercent = 100;
+    } else {
+      tx.progressPercent = Math.round((completed / total) * 100);
+    }
 
     if (actionReq > 0) {
       tx.status = 'ACTION_REQUIRED';
@@ -488,6 +499,7 @@ class OrchestratorService {
       });
     } else if (failed === activeTotal) {
       tx.status = 'FAILED';
+      tx.progressPercent = 0;
       auditService.log({
         correlationId: tx.correlationId,
         applicationId: tx.applicationId,
@@ -496,8 +508,10 @@ class OrchestratorService {
         result: 'FAILED',
         details: `All ${failed} active target departments encountered errors.`
       });
+    } else if (completed > 0) {
+      tx.status = 'IN_PROGRESS';
     } else {
-      tx.status = 'PROCESSING';
+      tx.status = 'SUBMITTED';
     }
 
     const finalAckReceivedAt = new Date().toISOString();
