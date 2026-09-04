@@ -48,6 +48,7 @@ export class RuralAdapter implements DepartmentAdapter {
       requestVersion: request.requestVersion || 1,
       canonicalRequestHash: reqHash,
       documentHash: docHash,
+      createdAt: request.createdAt || new Date().toISOString(),
       citizen: {
         name: request.citizen.name || 'Demo Citizen',
         address: {
@@ -62,7 +63,9 @@ export class RuralAdapter implements DepartmentAdapter {
   public async send(transformedPayload: any, context: AdapterRequestContext): Promise<DepartmentStepResult> {
     const dept = serviceRegistry.getDepartment('RURAL_DEVELOPMENT');
     const baseUrl = dept?.baseUrl || 'https://sih-26129-gov-mesh-rural-develpment.vercel.app';
-    const receivedUtc = new Date().toISOString();
+    const sentAt = new Date().toISOString();
+    transformedPayload.sentAt = sentAt;
+
     const reqHash = context.canonicalRequestHash || transformedPayload.canonicalRequestHash;
     const docHash = context.documentHash || transformedPayload.documentHash;
     const ackId = `ACK-RURAL-${context.applicationId.replace(/[^a-zA-Z0-9]/g, '')}`;
@@ -75,64 +78,14 @@ export class RuralAdapter implements DepartmentAdapter {
       documentVersion: d.version || 1,
       documentSize: d.size || '1.2 MB',
       documentHash: d.checksum || d.documentHash || docHash,
-      uploadedAt: context.createdAt || receivedUtc,
-      receivedAt: receivedUtc,
+      uploadedAt: context.createdAt || sentAt,
+      receivedAt: sentAt,
       sourceSystem: 'GovMesh Citizen Portal',
       receivedFrom: 'GovMesh Core Ingress',
       contentType: d.contentType || 'application/pdf',
       integrityStatus: 'VERIFIED',
       downloadUrl: `/api/govmesh/evidence/${context.applicationId}/documents/${d.id || 'DOC-1'}`
     }));
-
-    // Register Received Request Snapshot in Rural Evidence Ledger
-    evidenceService.recordDepartmentReceived({
-      applicationId: context.applicationId,
-      correlationId: context.correlationId,
-      serviceCode: context.serviceCode,
-      departmentCode: 'RURAL_DEVELOPMENT',
-      departmentName: this.getDepartmentName(),
-      sourceSystem: 'GovMesh Core',
-      receivedAt: receivedUtc,
-      acceptedAt: new Date().toISOString(),
-      requestVersion: context.requestVersion || 1,
-      requestHash: reqHash,
-      hashStatus: 'VERIFIED',
-      citizenId: context.citizenId,
-      authorizedFields: ['citizenId', 'citizen.name', 'citizen.address.line1', 'citizen.address.district', 'citizen.address.state'],
-      receivedPayload: transformedPayload,
-      documents: docRecords.length > 0 ? docRecords : [{
-        documentId: 'DOC-RURAL-124',
-        applicationId: context.applicationId,
-        documentName: 'address-proof-demo.pdf',
-        documentType: 'PANCHAYAT_RESIDENCE_PROOF',
-        documentVersion: 1,
-        documentSize: '1.2 MB',
-        documentHash: docHash,
-        uploadedAt: context.createdAt || receivedUtc,
-        receivedAt: receivedUtc,
-        sourceSystem: 'GovMesh Citizen Portal',
-        receivedFrom: 'GovMesh Core Ingress',
-        contentType: 'application/pdf',
-        integrityStatus: 'VERIFIED',
-        downloadUrl: `/api/govmesh/evidence/${context.applicationId}/documents/DOC-RURAL-124`
-      }],
-      lifecycleState: 'ACCEPTED',
-      acknowledgement: {
-        acknowledgementId: ackId,
-        applicationId: context.applicationId,
-        correlationId: context.correlationId,
-        departmentCode: 'RURAL_DEVELOPMENT',
-        requestVersion: context.requestVersion || 1,
-        receivedAt: receivedUtc,
-        acceptedAt: new Date().toISOString(),
-        status: 'ACCEPTED',
-        requestHash: reqHash,
-        documentHash: docHash,
-        hashStatus: 'VERIFIED',
-        remarks: 'Gram Panchayat record ingested and accepted.'
-      },
-      updatedAt: receivedUtc
-    });
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -144,7 +97,8 @@ export class RuralAdapter implements DepartmentAdapter {
           'Content-Type': 'application/json',
           'X-Correlation-ID': context.correlationId,
           'X-GovMesh-App-ID': context.applicationId,
-          'X-GovMesh-Request-Hash': reqHash
+          'X-GovMesh-Request-Hash': reqHash,
+          'X-GovMesh-Sent-At': sentAt
         },
         body: JSON.stringify(transformedPayload),
         signal: controller.signal
@@ -160,20 +114,96 @@ export class RuralAdapter implements DepartmentAdapter {
         parsedData = { raw: rawText };
       }
 
-      const normResult = this.normalizeResponse(parsedData, response.status, context);
-      const completedUtc = new Date().toISOString();
+      const ackReceivedAt = new Date().toISOString();
+      const receivedAt = parsedData?.receivedAt || parsedData?.data?.receivedAt || new Date().toISOString();
+      const validatedAt = parsedData?.validatedAt || parsedData?.data?.validatedAt || receivedAt;
+      const acceptedAt = parsedData?.acceptedAt || parsedData?.data?.acceptedAt || validatedAt;
+      const completedAt = parsedData?.completedAt || parsedData?.data?.completedAt || (parsedData?.success ? ackReceivedAt : undefined);
+      const finalAckId = parsedData?.acknowledgementId || parsedData?.data?.acknowledgementId || ackId;
 
-      if (normResult.status === 'SUCCESS') {
-        evidenceService.updateDepartmentLifecycle('RURAL_DEVELOPMENT', context.applicationId, 'SUCCESS', normResult.remarks, completedUtc);
-      }
+      const normResult = this.normalizeResponse(parsedData, response.status, context);
+
+      const timestampReport = evidenceService.validateTimestampOrdering({
+        createdAt: context.createdAt,
+        sentAt,
+        receivedAt,
+        validatedAt,
+        acceptedAt,
+        completedAt: normResult.status === 'SUCCESS' ? completedAt : undefined,
+        ackReceivedAt
+      });
+
+      // Register Received Request Snapshot in Rural Evidence Ledger
+      evidenceService.recordDepartmentReceived({
+        applicationId: context.applicationId,
+        correlationId: context.correlationId,
+        serviceCode: context.serviceCode,
+        departmentCode: 'RURAL_DEVELOPMENT',
+        departmentName: this.getDepartmentName(),
+        sourceSystem: 'GovMesh Core',
+        sentAt,
+        receivedAt,
+        validatedAt,
+        acceptedAt,
+        completedAt: normResult.status === 'SUCCESS' ? completedAt : undefined,
+        ackReceivedAt,
+        requestVersion: context.requestVersion || 1,
+        requestHash: reqHash,
+        hashStatus: 'VERIFIED',
+        citizenId: context.citizenId,
+        authorizedFields: ['citizenId', 'citizen.name', 'citizen.address.line1', 'citizen.address.district', 'citizen.address.state'],
+        receivedPayload: transformedPayload,
+        documents: docRecords.length > 0 ? docRecords : [{
+          documentId: 'DOC-RURAL-124',
+          applicationId: context.applicationId,
+          documentName: 'address-proof-demo.pdf',
+          documentType: 'PANCHAYAT_RESIDENCE_PROOF',
+          documentVersion: 1,
+          documentSize: '1.2 MB',
+          documentHash: docHash,
+          uploadedAt: context.createdAt || sentAt,
+          receivedAt,
+          sourceSystem: 'GovMesh Citizen Portal',
+          receivedFrom: 'GovMesh Core Ingress',
+          contentType: 'application/pdf',
+          integrityStatus: 'VERIFIED',
+          downloadUrl: `/api/govmesh/evidence/${context.applicationId}/documents/DOC-RURAL-124`
+        }],
+        lifecycleState: normResult.status === 'SUCCESS' ? 'SUCCESS' : 'ACCEPTED',
+        acknowledgement: {
+          acknowledgementId: finalAckId,
+          applicationId: context.applicationId,
+          correlationId: context.correlationId,
+          departmentCode: 'RURAL_DEVELOPMENT',
+          requestVersion: context.requestVersion || 1,
+          sentAt,
+          receivedAt,
+          validatedAt,
+          acceptedAt,
+          completedAt: normResult.status === 'SUCCESS' ? completedAt : undefined,
+          ackReceivedAt,
+          status: normResult.status === 'SUCCESS' ? 'COMPLETED' : 'ACCEPTED',
+          requestHash: reqHash,
+          documentHash: docHash,
+          hashStatus: 'VERIFIED',
+          remarks: normResult.remarks,
+          timestampIntegrity: timestampReport
+        },
+        updatedAt: ackReceivedAt,
+        timestampIntegrity: timestampReport
+      });
 
       normResult.requestHash = reqHash;
       normResult.hashStatus = 'VERIFIED';
       normResult.documentHash = docHash;
-      normResult.receivedAt = receivedUtc;
-      normResult.acceptedAt = receivedUtc;
-      normResult.completedAt = completedUtc;
-      normResult.acknowledgementId = ackId;
+      normResult.sentAt = sentAt;
+      normResult.receivedAt = receivedAt;
+      normResult.validatedAt = validatedAt;
+      normResult.acceptedAt = acceptedAt;
+      normResult.completedAt = completedAt;
+      normResult.ackReceivedAt = ackReceivedAt;
+      normResult.acknowledgementId = finalAckId;
+      normResult.timestampIntegrity = timestampReport;
 
       return normResult;
     } catch (err: any) {
@@ -183,20 +213,70 @@ export class RuralAdapter implements DepartmentAdapter {
         ? 'Rural Development server connection timed out.'
         : `Network Error: ${err.message}`;
 
-      evidenceService.updateDepartmentLifecycle('RURAL_DEVELOPMENT', context.applicationId, 'FAILED', errorMsg);
+      const ackReceivedAt = new Date().toISOString();
+      const receivedAt = new Date().toISOString();
+
+      const timestampReport = evidenceService.validateTimestampOrdering({
+        createdAt: context.createdAt,
+        sentAt,
+        receivedAt,
+        ackReceivedAt
+      });
+
+      evidenceService.recordDepartmentReceived({
+        applicationId: context.applicationId,
+        correlationId: context.correlationId,
+        serviceCode: context.serviceCode,
+        departmentCode: 'RURAL_DEVELOPMENT',
+        departmentName: this.getDepartmentName(),
+        sourceSystem: 'GovMesh Core',
+        sentAt,
+        receivedAt,
+        ackReceivedAt,
+        requestVersion: context.requestVersion || 1,
+        requestHash: reqHash,
+        hashStatus: 'VERIFIED',
+        citizenId: context.citizenId,
+        authorizedFields: ['citizenId', 'citizen.name', 'citizen.address.line1', 'citizen.address.district', 'citizen.address.state'],
+        receivedPayload: transformedPayload,
+        documents: docRecords,
+        lifecycleState: 'FAILED',
+        acknowledgement: {
+          acknowledgementId: ackId,
+          applicationId: context.applicationId,
+          correlationId: context.correlationId,
+          departmentCode: 'RURAL_DEVELOPMENT',
+          requestVersion: context.requestVersion || 1,
+          sentAt,
+          receivedAt,
+          ackReceivedAt,
+          status: 'REJECTED',
+          requestHash: reqHash,
+          documentHash: docHash,
+          hashStatus: 'VERIFIED',
+          remarks: errorMsg,
+          timestampIntegrity: timestampReport
+        },
+        updatedAt: ackReceivedAt,
+        timestampIntegrity: timestampReport
+      });
 
       return {
         departmentCode: 'RURAL_DEVELOPMENT',
         departmentName: this.getDepartmentName(),
         protocol: this.getProtocol(),
         status: 'FAILED',
-        timestamp: receivedUtc,
+        timestamp: receivedAt,
         remarks: errorMsg,
         errorCode: isTimeout ? 'TIMEOUT' : 'CONNECTION_FAILED',
         requestHash: reqHash,
         hashStatus: 'VERIFIED',
         documentHash: docHash,
-        acknowledgementId: ackId
+        sentAt,
+        receivedAt,
+        ackReceivedAt,
+        acknowledgementId: ackId,
+        timestampIntegrity: timestampReport
       };
     }
   }

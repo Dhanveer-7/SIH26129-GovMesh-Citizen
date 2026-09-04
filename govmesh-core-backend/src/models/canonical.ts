@@ -98,20 +98,33 @@ export interface DocumentEvidenceRecord {
   contentPreview?: string;
 }
 
+export interface TimestampIntegrityReport {
+  status: 'VERIFIED' | 'WARNING' | 'FAILED';
+  skewMs: number;
+  timeline: { stage: string; timestamp: string; system: string; owner: 'GOVMESH' | 'DEPARTMENT' }[];
+  violations: string[];
+  summary: string;
+}
+
 export interface DepartmentAcknowledgement {
   acknowledgementId: string;
   applicationId: string;
   correlationId: string;
   departmentCode: DepartmentCode;
   requestVersion: number;
+  sentAt?: string;
   receivedAt: string;
+  validatedAt?: string;
   acceptedAt?: string;
+  processingStartedAt?: string;
   completedAt?: string;
+  ackReceivedAt?: string;
   status: 'RECEIVED' | 'ACCEPTED' | 'PROCESSING' | 'COMPLETED' | 'REJECTED';
   requestHash: string;
   documentHash?: string;
   hashStatus: 'VERIFIED' | 'MISMATCH';
   remarks: string;
+  timestampIntegrity?: TimestampIntegrityReport;
 }
 
 export interface DepartmentReceivedRequest {
@@ -121,9 +134,13 @@ export interface DepartmentReceivedRequest {
   departmentCode: DepartmentCode;
   departmentName: string;
   sourceSystem: string;
+  sentAt?: string;
   receivedAt: string;
+  validatedAt?: string;
   acceptedAt?: string;
+  processingStartedAt?: string;
   completedAt?: string;
+  ackReceivedAt?: string;
   requestVersion: number;
   requestHash: string;
   hashStatus: 'VERIFIED' | 'MISMATCH';
@@ -134,6 +151,7 @@ export interface DepartmentReceivedRequest {
   lifecycleState: DepartmentStepStatus;
   acknowledgement: DepartmentAcknowledgement;
   updatedAt: string;
+  timestampIntegrity?: TimestampIntegrityReport;
 }
 
 export interface InteroperabilityEvidence {
@@ -142,21 +160,31 @@ export interface InteroperabilityEvidence {
   serviceCode: string;
   requestVersion: number;
   createdAt: string;
+  sentAt?: string;
+  completedAt?: string;
   canonicalRequestHash: string;
   documentHash?: string;
   overallStatus: TransactionStatus;
   progressPercent: number;
+  timestampIntegrity?: TimestampIntegrityReport;
   departmentDelivery: Record<string, {
     departmentCode: DepartmentCode;
     departmentName: string;
     protocol: string;
     lifecycleState: DepartmentStepStatus;
+    sentAt?: string;
     receivedAt: string;
+    validatedAt?: string;
+    acceptedAt?: string;
+    processingStartedAt?: string;
+    completedAt?: string;
+    ackReceivedAt?: string;
     requestHash: string;
     hashStatus: 'VERIFIED' | 'MISMATCH';
     documentHash?: string;
     documentIntegrity: 'VERIFIED' | 'NOT_APPLICABLE';
     acknowledgementId: string;
+    timestampIntegrity?: TimestampIntegrityReport;
   }>;
   receivedRequests: DepartmentReceivedRequest[];
 }
@@ -176,6 +204,7 @@ export interface CanonicalAddressChangeRequest {
   purpose: string;
   consentId: string;
   createdAt?: string;
+  sentAt?: string;
   consents?: {
     revenue?: boolean;
     food?: boolean;
@@ -203,10 +232,15 @@ export interface DepartmentStepResult {
   requestHash?: string;
   hashStatus?: 'VERIFIED' | 'MISMATCH';
   documentHash?: string;
+  sentAt?: string;
   receivedAt?: string;
+  validatedAt?: string;
   acceptedAt?: string;
+  processingStartedAt?: string;
   completedAt?: string;
+  ackReceivedAt?: string;
   acknowledgementId?: string;
+  timestampIntegrity?: TimestampIntegrityReport;
 }
 
 export interface TransactionRecord {
@@ -223,8 +257,11 @@ export interface TransactionRecord {
   createdAt: string;
   receivedAt?: string;
   sentAt?: string;
+  validatedAt?: string;
   acceptedAt?: string;
+  processingStartedAt?: string;
   completedAt?: string;
+  ackReceivedAt?: string;
   updatedAt: string;
   status: TransactionStatus;
   progressPercent: number;
@@ -234,6 +271,7 @@ export interface TransactionRecord {
   citizen: CitizenInfo;
   documents?: ProofDocument[];
   auditTrail: string[];
+  timestampIntegrity?: TimestampIntegrityReport;
 }
 
 export interface CanonicalTransactionResponse {

@@ -215,6 +215,24 @@ export const api = {
     const coreUrl = getCoreBaseUrl();
     const res = await fetch(`${coreUrl}/api/govmesh/evidence/${applicationId}/documents/${documentId}`);
     return res.json();
+  },
+
+  sendDepartmentStatusCallback: async (callbackPayload: {
+    applicationId: string;
+    departmentCode: string;
+    status: string;
+    remarks: string;
+    officer?: { name?: string; role?: string; notes?: string };
+    acknowledgementId?: string;
+    timestamp?: string;
+  }) => {
+    const coreUrl = getCoreBaseUrl();
+    const res = await fetch(`${coreUrl}/api/govmesh/callbacks/department-status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(callbackPayload)
+    });
+    return res.json();
   }
 };
 export default api;
