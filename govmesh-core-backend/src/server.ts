@@ -5,22 +5,31 @@ import govmeshRouter from './routes/govmeshRouter.js';
 
 const app = express();
 
-// Configure CORS for Citizen Portal and local frontend clients
+// Allowed origin regexes for development and verified Vercel production/preview deployments
+const ALLOWED_ORIGIN_PATTERNS = [
+  /^https:\/\/sih-26129-gov-mesh-citizen(-[a-z0-9-]+)?\.vercel\.app$/,
+  /^https:\/\/sih-26129-gov-mesh-rural-develpment(-[a-z0-9-]+)?\.vercel\.app$/,
+  /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/
+];
+
+// Configure CORS for Citizen Portal and authenticated frontend/backend clients
 app.use(cors({
   origin: (origin, callback) => {
     // Allow server-to-server or non-browser requests without origin header
     if (!origin) return callback(null, true);
     
-    // Check if origin is allowed or in local development
-    const isAllowed = config.frontendOrigins.includes(origin) ||
-                      origin.includes('localhost') ||
-                      origin.includes('127.0.0.1') ||
-                      origin.includes('vercel.app');
+    // Check exact matches from configured origins
+    if (config.frontendOrigins.includes(origin)) {
+      return callback(null, true);
+    }
 
-    if (isAllowed) {
+    // Check secure pattern matches (prevents vercel.app wildcard subdomain hijacking)
+    const isPatternMatched = ALLOWED_ORIGIN_PATTERNS.some(pattern => pattern.test(origin));
+
+    if (isPatternMatched) {
       callback(null, true);
     } else {
-      callback(new Error(`Origin ${origin} is not permitted by GovMesh CORS policy.`));
+      callback(new Error(`Origin ${origin} is not permitted by GovMesh CORS security policy.`));
     }
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
