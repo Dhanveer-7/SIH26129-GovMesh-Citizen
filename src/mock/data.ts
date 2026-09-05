@@ -85,6 +85,63 @@ export const mockServices: ServiceItem[] = [
 // Initial mock applications history
 export const mockApplications: Application[] = [
   {
+    id: "GM-2026-000124",
+    serviceId: "address-update",
+    serviceName: "Cross-Department Address Synchronization",
+    workflowId: "ADDRESS_CHANGE_V2",
+    timestamp: "2026-09-04T09:15:00Z",
+    correlationId: "CORR-2026-000124",
+    requestVersion: 1,
+    canonicalRequestHash: "sha256:7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069",
+    documentHash: "sha256:a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e",
+    status: "SUBMITTED",
+    progressPercent: 35,
+    completedDepartments: 0,
+    totalDepartments: 3,
+    steps: [
+      {
+        departmentName: "Revenue & Forest Department",
+        departmentCode: "REVENUE",
+        protocol: "REST/JSON",
+        action: "Verify/update address record & 7/12 land linkage",
+        status: "PENDING",
+        remarks: "Received in Revenue Officer queue — Awaiting desk scrutiny.",
+        timestamp: "2026-09-04T09:15:00Z",
+        requestHash: "sha256:7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069",
+        documentHash: "sha256:a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e",
+        receivedAt: "2026-09-04T09:15:20.000Z",
+        acknowledgementId: "ACK-REV-00124"
+      },
+      {
+        departmentName: "Food, Civil Supplies & Consumer Protection",
+        departmentCode: "FOOD",
+        protocol: "SOAP/XML",
+        action: "Update eligible ration/PDS household record",
+        status: "PENDING",
+        remarks: "Received via SOAP Web Service — Awaiting food supply officer verification.",
+        timestamp: "2026-09-04T09:15:00Z",
+        requestHash: "sha256:7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069",
+        documentHash: "sha256:a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e",
+        receivedAt: "2026-09-04T09:15:21.450Z",
+        acknowledgementId: "ACK-FOOD-00124"
+      },
+      {
+        departmentName: "Rural Development & Panchayat Raj",
+        departmentCode: "RURAL_DEVELOPMENT",
+        protocol: "CSV/SFTP",
+        action: "Update local Gram Panchayat resident register",
+        status: "PENDING",
+        remarks: "Ingested into Gram Panchayat queue — Awaiting local officer review.",
+        timestamp: "2026-09-04T09:15:00Z",
+        requestHash: "sha256:7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069",
+        documentHash: "sha256:a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e",
+        receivedAt: "2026-09-04T09:15:21.800Z",
+        acknowledgementId: "ACK-RURAL-00124"
+      }
+    ],
+    uploadedDocuments: ["doc-124-1"]
+  },
+  {
     id: "GM-2026-000087",
     serviceId: "income-certificate",
     serviceName: "Income Certificate",
@@ -111,6 +168,36 @@ export const mockApplications: Application[] = [
 // Initial mock consents history
 export const mockConsents: ConsentRecord[] = [
   {
+    id: "CONSENT-2026-00124-REV",
+    department: "Revenue & Forest Department",
+    scope: ["Full Name", "New Residential Address", "Electricity Proof Verification"],
+    purpose: "Synchronize land registry records and verify 7/12 extract residential address",
+    durationDays: 30,
+    status: "APPROVED",
+    createdAt: "2026-09-04T09:15:00Z",
+    expiryDate: "2026-10-04T09:15:00Z"
+  },
+  {
+    id: "CONSENT-2026-00124-FOOD",
+    department: "Food, Civil Supplies & Consumer Protection",
+    scope: ["Full Name", "New Residential Address", "Ration Card Quota Linkage"],
+    purpose: "Synchronize PDS ration card beneficiary residence address",
+    durationDays: 30,
+    status: "APPROVED",
+    createdAt: "2026-09-04T09:15:00Z",
+    expiryDate: "2026-10-04T09:15:00Z"
+  },
+  {
+    id: "CONSENT-2026-00124-RURAL",
+    department: "Rural Development & Panchayat Raj",
+    scope: ["Full Name", "New Residential Address", "Gram Panchayat Registry"],
+    purpose: "Synchronize village household registry and drinking water/tax record",
+    durationDays: 30,
+    status: "APPROVED",
+    createdAt: "2026-09-04T09:15:00Z",
+    expiryDate: "2026-10-04T09:15:00Z"
+  },
+  {
     id: "CONSENT-000087-REV",
     department: "Revenue Department",
     scope: ["Name", "Income Details", "Form 16 Verification Result"],
@@ -124,6 +211,33 @@ export const mockConsents: ConsentRecord[] = [
 
 // Initial data sharing logs
 export const mockDataSharingLogs: DataSharingLog[] = [
+  {
+    id: "DSL-12401",
+    sharedWith: "Revenue & Forest Department",
+    dataScope: ["Full Name", "New Address", "Electricity Proof"],
+    purpose: "Revenue address record and 7/12 land registry linkage",
+    timestamp: "2026-09-04T09:15:20Z",
+    applicationId: "GM-2026-000124",
+    consentId: "CONSENT-2026-00124-REV"
+  },
+  {
+    id: "DSL-12402",
+    sharedWith: "Food & Civil Supplies Department",
+    dataScope: ["Full Name", "New Address", "PDS Verification"],
+    purpose: "Ration card address synchronization via SOAP Web Service",
+    timestamp: "2026-09-04T09:15:21Z",
+    applicationId: "GM-2026-000124",
+    consentId: "CONSENT-2026-00124-FOOD"
+  },
+  {
+    id: "DSL-12403",
+    sharedWith: "Rural Development Department",
+    dataScope: ["Full Name", "New Address", "Gram Panchayat Registry"],
+    purpose: "Village household register update via CSV/SFTP queue",
+    timestamp: "2026-09-04T09:15:21Z",
+    applicationId: "GM-2026-000124",
+    consentId: "CONSENT-2026-00124-RURAL"
+  },
   {
     id: "DSL-8701",
     sharedWith: "Revenue Department",
