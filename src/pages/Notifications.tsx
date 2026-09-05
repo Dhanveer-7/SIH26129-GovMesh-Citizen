@@ -21,14 +21,14 @@ export const Notifications: React.FC = () => {
     try {
       const res = await api.submitGovMeshTransaction({
         applicationId: 'GM-2026-000124',
-        citizenId: 'GM-CIT-10001',
+        citizenId: 'CIT-MH-1001',
         serviceCode: 'ADDRESS_CHANGE',
         purpose: 'Live Cross-Department Verification Test',
         consents: { revenue: true, food: true, rural: true },
         citizen: {
-          name: 'Aarav Sharma',
+          name: 'Rajesh Shantaram Patil',
           address: {
-            line1: 'Flat 402, Shivajinagar Residency, FC Road',
+            line1: 'Flat 402, Shivshankar Heights, Karve Road, Kothrud',
             district: 'Pune',
             state: 'Maharashtra'
           }
