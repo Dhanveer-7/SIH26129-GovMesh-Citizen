@@ -21,11 +21,11 @@ class EvidenceService {
 
   private seedDefaultEvidence() {
     const appId = 'GM-2026-000124';
-    const corrId = 'CORR-26-000124';
-    const createdUtc = '2026-09-04T04:35:20.000Z';
-    const receivedUtc = '2026-09-04T04:35:21.450Z';
-    const acceptedUtc = '2026-09-04T04:35:22.100Z';
-    const completedUtc = '2026-09-04T04:35:25.800Z';
+    const corrId = 'GM-CORR-2026-000124';
+    const createdUtc = '2026-09-05T04:30:00.000Z';
+    const receivedUtc = '2026-09-05T04:30:05.000Z';
+    const acceptedUtc = '2026-09-05T04:30:06.000Z';
+    const completedUtc = '2026-09-05T04:30:10.000Z';
 
     const reqHash = 'sha256:7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069';
     const docHash = 'sha256:a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e';
@@ -64,17 +64,17 @@ class EvidenceService {
       requestVersion: 1,
       requestHash: reqHash,
       hashStatus: 'VERIFIED',
-      citizenId: 'GM-CIT-10001',
+      citizenId: 'CIT-MH-1001',
       authorizedFields: ['citizen.name', 'citizen.address.line1', 'citizen.address.district', 'citizen.address.taluka', 'consent_id'],
       receivedPayload: {
         application_id: appId,
-        citizen_name: 'Aarav Sharma',
+        citizen_name: 'Rajesh Shantaram Patil',
         new_address: {
-          line: 'Flat 402, Shivajinagar Residency, FC Road',
+          line: 'Flat 402, Shivshankar Heights, Karve Road, Kothrud',
           district: 'Pune',
           taluka: 'Haveli'
         },
-        consent_id: 'CONSENT-00124',
+        consent_id: 'GM-CONSENT-2026-000124',
         statutory_purpose: 'Land Record & Residential Verification'
       },
       documents: [defaultDoc],
@@ -111,7 +111,7 @@ class EvidenceService {
       requestVersion: 1,
       requestHash: reqHash,
       hashStatus: 'VERIFIED',
-      citizenId: 'GM-CIT-10001',
+      citizenId: 'CIT-MH-1001',
       authorizedFields: ['citizen.name', 'citizen.address.line', 'citizen.address.district', 'verification.status', 'consent.id'],
       receivedPayload: {
         applicationId: appId,
@@ -120,10 +120,10 @@ class EvidenceService {
         correlationId: corrId,
         purpose: 'RATION_ADDRESS_UPDATE',
         citizen: {
-          reference: 'GM-CIT-10001',
-          name: 'Aarav Sharma',
+          reference: 'CIT-MH-1001',
+          name: 'Rajesh Shantaram Patil',
           address: {
-            line: 'Flat 402, Shivajinagar Residency, FC Road',
+            line: 'Flat 402, Shivshankar Heights, Karve Road, Kothrud',
             district: 'Pune',
             taluka: 'Haveli'
           }
@@ -164,16 +164,16 @@ class EvidenceService {
       requestVersion: 1,
       requestHash: reqHash,
       hashStatus: 'VERIFIED',
-      citizenId: 'GM-CIT-10001',
+      citizenId: 'CIT-MH-1001',
       authorizedFields: ['citizenId', 'citizen.name', 'citizen.address.line1', 'citizen.address.district', 'citizen.address.state'],
       receivedPayload: {
         applicationId: appId,
-        citizenId: 'GM-CIT-10001',
+        citizenId: 'CIT-MH-1001',
         serviceCode: 'ADDRESS_CHANGE',
         citizen: {
-          name: 'Aarav Sharma',
+          name: 'Rajesh Shantaram Patil',
           address: {
-            line1: 'Flat 402, Shivajinagar Residency, FC Road',
+            line1: 'Flat 402, Shivshankar Heights, Karve Road, Kothrud',
             district: 'Pune',
             state: 'Maharashtra'
           }

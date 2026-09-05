@@ -190,8 +190,8 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       status: 'VERIFIED',
       confidenceScore: 98,
       extractionResult: {
-        name: "Aarav Sharma",
-        address: "Flat 402, Shivajinagar Residency, FC Road, Pune, Maharashtra - 411005",
+        name: "Rajesh Shantaram Patil",
+        address: "Flat 402, Shivshankar Heights, Karve Road, Kothrud, Haveli, Pune - 411038",
         issueDate: "12/04/2026"
       }
     };
@@ -335,15 +335,15 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const response = await api.submitGovMeshTransaction({
           applicationId: appId,
-          citizenId: "GM-CIT-10001",
+          citizenId: "CIT-MH-1001",
           serviceCode: "ADDRESS_CHANGE",
           purpose: "Unified residence address update across state registries",
           consentId: consentBase,
           consents: consentsApproved,
           citizen: {
-            name: ocrFields?.name || "Aarav Sharma",
+            name: ocrFields?.name || "Rajesh Shantaram Patil",
             address: {
-              line1: ocrFields?.address || "Flat 402, Shivajinagar Residency, FC Road",
+              line1: ocrFields?.address || "Flat 402, Shivshankar Heights, Karve Road, Kothrud, Haveli, Pune - 411038",
               district: "Pune",
               state: "Maharashtra"
             }
