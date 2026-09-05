@@ -15,8 +15,9 @@ export const ApplicationTracking: React.FC = () => {
     applications, setApplications, trackingState, triggerDemoState, uploadDocument, documents, activeAppId
   } = useDemo();
 
-  const [searchId, setSearchId] = useState(activeAppId || (applications.length > 0 ? applications[0].id : ''));
-  const [selectedAppId, setSelectedAppId] = useState(activeAppId || (applications.length > 0 ? applications[0].id : ''));
+  const defaultAppId = activeAppId || (applications.find(a => a.id === 'GM-2026-000124')?.id) || (applications.length > 0 ? applications[0].id : '');
+  const [searchId, setSearchId] = useState(defaultAppId);
+  const [selectedAppId, setSelectedAppId] = useState(defaultAppId);
   const [isRetrying, setIsRetrying] = useState(false);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [showAuditModal, setShowAuditModal] = useState(false);
@@ -35,8 +36,11 @@ export const ApplicationTracking: React.FC = () => {
     if (activeAppId) {
       setSelectedAppId(activeAppId);
       setSearchId(activeAppId);
+    } else if (!selectedAppId && defaultAppId) {
+      setSelectedAppId(defaultAppId);
+      setSearchId(defaultAppId);
     }
-  }, [activeAppId]);
+  }, [activeAppId, defaultAppId]);
 
   // Synchronize live status with GovMesh Core cloud orchestrator
   useEffect(() => {
@@ -367,9 +371,16 @@ export const ApplicationTracking: React.FC = () => {
             {/* Metadata Summary */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-4 gap-3">
               <div>
-                <h3 className="font-extrabold text-base text-slate-900 uppercase tracking-wide">
-                  {app.serviceName}
-                </h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-extrabold text-base text-slate-900 uppercase tracking-wide">
+                    {app.serviceName}
+                  </h3>
+                  {app.id === 'GM-2026-000124' && (
+                    <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300 font-extrabold text-[10px] uppercase tracking-wide">
+                      GovMesh Demonstration Transaction
+                    </span>
+                  )}
+                </div>
                 <div className="flex flex-wrap items-center gap-3 text-[10px] text-slate-500 font-mono mt-1">
                   <span>Application: <strong className="text-slate-800">{app.id}</strong></span>
                   <span>•</span>
